@@ -1,0 +1,31 @@
+{
+  "name": "statrace",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,magenta \"node --watch server/index.ts\" \"vite\"",
+    "build": "tsc --noEmit && vite build",
+    "start": "NODE_ENV=production node server/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@hono/node-server": "^2.1.1",
+    "hono": "^4.13.8",
+    "idb-keyval": "^6.3.0",
+    "mediabunny": "^1.59.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}
