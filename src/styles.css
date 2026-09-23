@@ -260,6 +260,8 @@ input[type='color'] {
   display: flex;
   align-items: center;
   gap: 0.7rem;
+  color: inherit;
+  text-decoration: none;
 }
 
 .brand-mark {
@@ -1107,4 +1109,138 @@ input[type='color'] {
 
 .home-footer a:hover {
   color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- app bar, settings, providers */
+
+.app-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.app-bar .ghost {
+  flex: none;
+  white-space: nowrap;
+}
+
+.primary.small,
+.ghost.small {
+  padding: 0.45em 0.95em;
+  font-size: 0.88rem;
+}
+
+.link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chip.on {
+  color: var(--ink);
+  border-color: rgba(142, 166, 255, 0.6);
+  background: rgba(142, 166, 255, 0.14);
+}
+
+a.example {
+  color: inherit;
+  text-decoration: none;
+}
+
+.via > .label {
+  margin-bottom: -0.35rem;
+}
+
+.settings-main {
+  margin-top: 5vh;
+}
+
+.settings-main h1 {
+  margin-top: 1.6rem;
+  font-size: clamp(1.8rem, 3.4vw, 2.5rem);
+  font-weight: 800;
+}
+
+.settings-main .lead {
+  margin-bottom: 0;
+}
+
+.settings-section {
+  margin-top: 2.6rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.settings-section h2 {
+  font-size: 1.1rem;
+}
+
+.provider {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.provider.on {
+  border-color: rgba(142, 166, 255, 0.55);
+  background: rgba(142, 166, 255, 0.08);
+}
+
+.provider-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  cursor: pointer;
+}
+
+.provider-head input {
+  margin-top: 0.25rem;
+  accent-color: var(--accent);
+}
+
+.provider-head > span {
+  flex: 1;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.provider-head small {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.badge {
+  flex: none;
+  padding: 0.2em 0.65em;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.badge.ok {
+  color: #9ee6b8;
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+@media (max-width: 560px) {
+  .brand-tag {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .wide-only {
+    display: none;
+  }
 }

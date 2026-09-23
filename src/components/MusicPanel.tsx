@@ -3,9 +3,10 @@ import { KEYS, MUSIC_STYLES, type Dataset, type MusicSpec } from '../../shared/d
 import type { MusicSource } from '../audio/soundtrack.ts';
 import { generateMusic, generateMusicWithKey, getStatus } from '../lib/api.ts';
 import { useLang, useT, type MessageKey } from '../lib/i18n.ts';
-import { getKey, isRemembered, setKey } from '../lib/keys.ts';
+import { getKey } from '../lib/keys.ts';
 import type { Project, VideoSettings } from '../lib/project.ts';
 import { saveAudio } from '../lib/store.ts';
+import { KeyField } from './KeyField.tsx';
 import type { AudioState } from './Studio.tsx';
 
 const STYLE_LABEL: Record<string, string> = {
@@ -40,7 +41,6 @@ export function MusicPanel(props: {
   // true: the local server holds an ElevenLabs key; false: the visitor brings their own.
   const [serverKey, setServerKey] = useState<boolean | null>(null);
   const [elevenKey, setElevenKey] = useState(() => getKey('elevenlabs'));
-  const [remember, setRemember] = useState(() => isRemembered('elevenlabs') || !getKey('elevenlabs'));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
@@ -64,8 +64,7 @@ export function MusicPanel(props: {
       if (serverKey) {
         blob = await generateMusic(music.prompt, durationMs, ac.signal);
       } else {
-        setKey('elevenlabs', elevenKey, remember);
-        blob = await generateMusicWithKey(elevenKey.trim(), music.prompt, durationMs, ac.signal);
+        blob = await generateMusicWithKey(elevenKey, music.prompt, durationMs, ac.signal);
       }
       await saveAudio(project.id, 'ai', blob);
       const stamp = new Date().toLocaleString(lang === 'de' ? 'de-DE' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' });
@@ -167,28 +166,13 @@ export function MusicPanel(props: {
             <textarea rows={5} value={music.prompt} onChange={(e) => setMusic({ prompt: e.target.value })} />
           </label>
           {serverKey === false && (
-            <div className="key-field">
-              <label className="field">
-                <span className="label">
-                  {t('elevenKey')}
-                  <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noreferrer">
-                    {t('keyCreate')} ↗
-                  </a>
-                </span>
-                <input
-                  type="password"
-                  value={elevenKey}
-                  onChange={(e) => setElevenKey(e.target.value)}
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </label>
-              <label className="check">
-                <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-                {t('keyRemember')}
-              </label>
-              <p className="hint">{t('elevenKeyHint')}</p>
-            </div>
+            <KeyField
+              name="elevenlabs"
+              label={t('elevenKey')}
+              createUrl="https://elevenlabs.io/app/settings/api-keys"
+              hint={t('elevenKeyHint')}
+              onChange={() => setElevenKey(getKey('elevenlabs'))}
+            />
           )}
           <div className="row-actions">
             <button type="button" className="primary" disabled={busy || !canGenerate} onClick={generate}>

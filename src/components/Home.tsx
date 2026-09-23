@@ -1,17 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { parseDataset, type ResearchRequest, type ServerStatus } from '../../shared/dataset.ts';
 import { getStatus } from '../lib/api.ts';
+import { exampleProject, listExamples, type Example } from '../lib/examples.ts';
 import { useLang, useT } from '../lib/i18n.ts';
-import { getKey, isRemembered, setKey } from '../lib/keys.ts';
+import { REPO_URL } from '../lib/links.ts';
 import { newProject, type Project } from '../lib/project.ts';
+import { BYOK_PROVIDERS, defaultProvider, hasKey, PROVIDERS, saveProvider, type ProviderId } from '../lib/providers.ts';
 import { deleteProject, listProjects, type ProjectMeta } from '../lib/store.ts';
+import { Brand } from './Brand.tsx';
 import { LangSwitch } from './LangSwitch.tsx';
-
-export type ResearchVia = 'cli' | 'api';
-
-export const REPO_URL = 'https://github.com/moinsen-dev/StatisticVideoGenerator';
-
-type Example = { file: string; title: string; subtitle: string; language: 'de' | 'en'; bars: number; icons: string[] };
+import { ProviderKeyField, providerTitle } from './Settings.tsx';
 
 const TOPICS = {
   de: [
@@ -33,9 +31,10 @@ const TOPICS = {
 };
 
 export function Home(props: {
-  onStart: (req: ResearchRequest, via: ResearchVia) => void;
+  onStart: (req: ResearchRequest, provider: ProviderId) => void;
   onOpen: (id: string) => void;
   onImport: (project: Project) => void;
+  onSettings: () => void;
 }) {
   const t = useT();
   const lang = useLang();
@@ -44,9 +43,10 @@ export function Home(props: {
   const [bars, setBars] = useState(10);
   const [depth, setDepth] = useState<'fast' | 'thorough'>('fast');
   const [status, setStatus] = useState<ServerStatus | null | undefined>(undefined);
-  const [via, setVia] = useState<ResearchVia>('api');
-  const [apiKey, setApiKey] = useState(() => getKey('anthropic'));
-  const [remember, setRemember] = useState(() => isRemembered('anthropic') || !getKey('anthropic'));
+  const [provider, setProvider] = useState<ProviderId>(() => defaultProvider(false));
+  // The key field stays open while someone types, even once the key looks complete.
+  const [keyOpen, setKeyOpen] = useState(false);
+  const [, setKeyVersion] = useState(0);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [examples, setExamples] = useState<Example[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
@@ -54,23 +54,25 @@ export function Home(props: {
 
   useEffect(() => {
     void getStatus().then((s) => {
+      const id = defaultProvider(Boolean(s?.claude.available && s.claude.loggedIn));
       setStatus(s);
-      if (s?.claude.available && s.claude.loggedIn) setVia('cli');
+      setProvider(id);
+      setKeyOpen(!hasKey(id));
     });
     void listProjects().then(setProjects);
-    fetch('/examples/index.json')
-      .then((r) => (r.ok ? r.json() : []))
-      .then(setExamples, () => setExamples([]));
+    void listExamples().then(setExamples);
   }, []);
 
   const cliReady = Boolean(status?.claude.available && status.claude.loggedIn);
-  const keyReady = apiKey.trim().startsWith('sk-');
-  const canStart = topic.trim().length >= 3 && (via === 'cli' ? cliReady : keyReady);
+  const ids: ProviderId[] = cliReady ? ['claude-code', ...BYOK_PROVIDERS] : BYOK_PROVIDERS;
+  const p = PROVIDERS[provider];
+  const ready = provider === 'claude-code' ? cliReady : hasKey(provider);
+  const canStart = topic.trim().length >= 3 && ready;
 
-  const openExample = async (ex: Example) => {
-    const res = await fetch(`/examples/${ex.file}`);
-    const dataset = parseDataset(await res.json());
-    props.onImport(newProject(ex.title, dataset, null, ex.bars));
+  const choose = (id: ProviderId) => {
+    setProvider(id);
+    saveProvider(id);
+    setKeyOpen(!hasKey(id));
   };
 
   const importFile = async (file: File) => {
@@ -86,15 +88,12 @@ export function Home(props: {
 
   return (
     <div className="home">
-      <header className="brand">
-        <span className="brand-mark" aria-hidden>
-          <i style={{ height: '55%' }} />
-          <i style={{ height: '100%' }} />
-          <i style={{ height: '75%' }} />
-        </span>
-        <span className="brand-name">StatRace</span>
-        <span className="brand-tag">{t('tagline')}</span>
+      <header className="app-bar">
+        <Brand tag={t('tagline')} />
         <span className="spacer" />
+        <button type="button" className="ghost small" onClick={props.onSettings} aria-label={t('settings')}>
+          ⚙<span className="wide-only"> {t('settings')}</span>
+        </button>
         <LangSwitch />
       </header>
 
@@ -106,9 +105,7 @@ export function Home(props: {
           className="topic-card"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!canStart) return;
-            if (via === 'api') setKey('anthropic', apiKey, remember);
-            props.onStart({ topic: topic.trim(), language, bars, depth }, via);
+            if (canStart) props.onStart({ topic: topic.trim(), language, bars, depth }, provider);
           }}
         >
           <textarea
@@ -132,41 +129,32 @@ export function Home(props: {
 
           {status !== undefined && (
             <div className="via">
-              {cliReady && (
-                <div className="seg" role="radiogroup" aria-label={t('via')}>
-                  <button type="button" className={via === 'cli' ? 'on' : ''} onClick={() => setVia('cli')}>
-                    {t('viaCli')}
+              <span className="label">{t('via')}</span>
+              <div className="seg" role="radiogroup" aria-label={t('via')}>
+                {ids.map((id) => (
+                  <button
+                    type="button"
+                    key={id}
+                    role="radio"
+                    aria-checked={provider === id}
+                    className={provider === id ? 'on' : ''}
+                    onClick={() => choose(id)}
+                  >
+                    {providerTitle(id, t)}
                   </button>
-                  <button type="button" className={via === 'api' ? 'on' : ''} onClick={() => setVia('api')}>
-                    {t('viaApi')}
-                  </button>
-                </div>
-              )}
-              {via === 'api' && (
-                <div className="key-field">
-                  <label className="field">
-                    <span className="label">
-                      {t('keyLabel')}
-                      <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">
-                        {t('keyCreate')} ↗
-                      </a>
-                    </span>
-                    <input
-                      type="password"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="sk-ant-…"
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                  </label>
-                  <label className="check">
-                    <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-                    {t('keyRemember')}
-                  </label>
-                  <p className="hint">{t('keyHint')}</p>
-                </div>
-              )}
+                ))}
+              </div>
+              {p.key &&
+                (keyOpen ? (
+                  <ProviderKeyField id={provider} onChange={() => setKeyVersion((v) => v + 1)} />
+                ) : (
+                  <p className="hint key-ok">
+                    ✓ {t('keySaved')} ·{' '}
+                    <button type="button" className="link" onClick={() => setKeyOpen(true)}>
+                      {t('keyChange')}
+                    </button>
+                  </p>
+                ))}
             </div>
           )}
 
@@ -191,8 +179,8 @@ export function Home(props: {
             <label>
               {t('depth')}
               <select value={depth} onChange={(e) => setDepth(e.target.value as 'fast' | 'thorough')}>
-                <option value="fast">{t('depthFast')}</option>
-                <option value="thorough">{t('depthThorough')}</option>
+                <option value="fast">{t('depthFast', { model: p.models.fast })}</option>
+                <option value="thorough">{t('depthThorough', { model: p.models.thorough })}</option>
               </select>
             </label>
             <button className="primary" disabled={!canStart}>
@@ -219,7 +207,7 @@ export function Home(props: {
             <ul>
               {examples.map((ex) => (
                 <li key={ex.file}>
-                  <button type="button" className="example" onClick={() => void openExample(ex)}>
+                  <button type="button" className="example" onClick={() => void exampleProject(ex).then(props.onImport)}>
                     <span className="example-icons" aria-hidden>
                       {ex.icons.join(' ')}
                     </span>
@@ -256,13 +244,13 @@ export function Home(props: {
             <p className="muted">{t('noProjects')}</p>
           ) : (
             <ul>
-              {projects.map((p) => (
-                <li key={p.id}>
-                  <button type="button" className="project" onClick={() => props.onOpen(p.id)}>
-                    <strong>{p.title}</strong>
-                    <span>{p.topic}</span>
+              {projects.map((pr) => (
+                <li key={pr.id}>
+                  <button type="button" className="project" onClick={() => props.onOpen(pr.id)}>
+                    <strong>{pr.title}</strong>
+                    <span>{pr.topic}</span>
                     <time>
-                      {new Date(p.updatedAt).toLocaleString(lang === 'de' ? 'de-DE' : 'en-GB', {
+                      {new Date(pr.updatedAt).toLocaleString(lang === 'de' ? 'de-DE' : 'en-GB', {
                         dateStyle: 'medium',
                         timeStyle: 'short',
                       })}
@@ -272,10 +260,10 @@ export function Home(props: {
                     type="button"
                     className="icon-btn"
                     title={t('delete')}
-                    aria-label={`${p.title}: ${t('delete')}`}
+                    aria-label={`${pr.title}: ${t('delete')}`}
                     onClick={async () => {
-                      if (!confirm(t('deleteConfirm', { title: p.title }))) return;
-                      await deleteProject(p.id);
+                      if (!confirm(t('deleteConfirm', { title: pr.title }))) return;
+                      await deleteProject(pr.id);
                       setProjects(await listProjects());
                     }}
                   >

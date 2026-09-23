@@ -1,41 +1,54 @@
 import { useEffect, useState } from 'react';
 import type { ResearchRequest, ResearchResult } from '../shared/dataset.ts';
-import { Home, type ResearchVia } from './components/Home.tsx';
+import { Home } from './components/Home.tsx';
 import { ResearchView } from './components/ResearchView.tsx';
+import { Settings } from './components/Settings.tsx';
 import { Studio } from './components/Studio.tsx';
+import { exampleProject, listExamples } from './lib/examples.ts';
 import { newProject, type Project } from './lib/project.ts';
+import type { ProviderId } from './lib/providers.ts';
 import { loadProject, saveProject } from './lib/store.ts';
 
 type View =
   | { name: 'home' }
-  | { name: 'research'; request: ResearchRequest; via: ResearchVia }
+  | { name: 'settings' }
+  | { name: 'research'; request: ResearchRequest; provider: ProviderId }
   | { name: 'studio'; project: Project };
 
-const projectFromHash = () => /^#p=([\w-]+)$/.exec(location.hash)?.[1] ?? null;
+// Hash routes: #p=<id> reopens a saved project, #ex=<file> opens an example (links from the
+// landing page), #settings shows the settings.
+const hashMatch = (re: RegExp) => re.exec(location.hash)?.[1] ?? null;
 
 export function App() {
-  const [view, setView] = useState<View>({ name: 'home' });
-
-  useEffect(() => {
-    const id = projectFromHash();
-    if (id) void loadProject(id).then((p) => p && setView({ name: 'studio', project: p }));
-  }, []);
-
-  useEffect(() => {
-    const hash = view.name === 'studio' ? `#p=${view.project.id}` : '';
-    if (location.hash !== hash) history.replaceState(null, '', hash || location.pathname);
-  }, [view]);
+  const [view, setView] = useState<View>(() => (location.hash === '#settings' ? { name: 'settings' } : { name: 'home' }));
 
   const open = async (project: Project) => {
     await saveProject(project);
     setView({ name: 'studio', project });
   };
 
+  useEffect(() => {
+    const id = hashMatch(/^#p=([\w-]+)$/);
+    const example = hashMatch(/^#ex=([\w.-]+\.json)$/);
+    if (id) void loadProject(id).then((p) => p && setView({ name: 'studio', project: p }));
+    if (example) {
+      void listExamples()
+        .then((all) => all.find((ex) => ex.file === example))
+        .then(async (ex) => ex && open(await exampleProject(ex)));
+    }
+  }, []);
+
+  useEffect(() => {
+    const hash = view.name === 'studio' ? `#p=${view.project.id}` : view.name === 'settings' ? '#settings' : '';
+    if (location.hash !== hash) history.replaceState(null, '', hash || location.pathname);
+  }, [view]);
+
+  if (view.name === 'settings') return <Settings onBack={() => setView({ name: 'home' })} />;
   if (view.name === 'research') {
     return (
       <ResearchView
         request={view.request}
-        via={view.via}
+        provider={view.provider}
         onDone={(result: ResearchResult) =>
           void open(newProject(view.request.topic, result.dataset, result.meta, view.request.bars))
         }
@@ -48,12 +61,13 @@ export function App() {
   }
   return (
     <Home
-      onStart={(request, via) => setView({ name: 'research', request, via })}
+      onStart={(request, provider) => setView({ name: 'research', request, provider })}
       onOpen={async (id) => {
         const p = await loadProject(id);
         if (p) setView({ name: 'studio', project: p });
       }}
       onImport={(project) => void open(project)}
+      onSettings={() => setView({ name: 'settings' })}
     />
   );
 }

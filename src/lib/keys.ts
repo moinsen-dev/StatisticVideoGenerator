@@ -1,8 +1,9 @@
 // Visitors' own API keys (BYOK). They stay in this browser and are sent only to the provider's
 // API. Stored in localStorage when "remember" is on, otherwise kept for this tab only.
 
-export type KeyName = 'anthropic' | 'elevenlabs';
+export type KeyName = 'anthropic' | 'openai' | 'elevenlabs';
 
+const NAMES: KeyName[] = ['anthropic', 'openai', 'elevenlabs'];
 const storageKey = (name: KeyName) => `statrace:key:${name}`;
 const memory = new Map<KeyName, string>();
 
@@ -32,4 +33,8 @@ export function isRemembered(name: KeyName): boolean {
   } catch {
     return false;
   }
+}
+
+export function forgetAllKeys(): void {
+  for (const name of NAMES) setKey(name, '', false);
 }

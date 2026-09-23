@@ -21,6 +21,10 @@ Node 24 or newer is required: the server runs TypeScript directly via Node's typ
 - **Server code uses erasable TypeScript only.** No enums or parameter properties, and imports carry the
   `.ts` extension. `tsconfig.json` enforces this.
 - **Keys never touch a server we run.** BYOK calls go from the browser straight to the provider.
+- **A new research provider** is one adapter in `src/lib/research-<provider>.ts` that returns a `ResearchResult`,
+  plus an entry in `src/lib/providers.ts`. It needs web search, structured output against `DatasetSchema`, and
+  CORS for browser calls. Check the provider's terms first: they must allow turning search results into a
+  published video (Google's grounding terms don't, which is why Gemini is missing).
 - **All UI text goes through `useT()`** in `src/lib/i18n.ts`, with an English and a German entry.
 - **The dataset schema is a contract.** `shared/dataset.ts` is both Claude's structured-output schema and
   the validation for imported JSON. Change it deliberately, and keep `normalizeDataset` forgiving.

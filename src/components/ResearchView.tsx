@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ResearchProgress, ResearchRequest, ResearchResult } from '../../shared/dataset.ts';
-import { research } from '../lib/api.ts';
 import { useT, type MessageKey, type Translate } from '../lib/i18n.ts';
-import { getKey } from '../lib/keys.ts';
-import { researchWithApiKey } from '../lib/research-byok.ts';
-import type { ResearchVia } from './Home.tsx';
+import { PROVIDERS, runResearch, type ProviderId } from '../lib/providers.ts';
 
 const ICON: Record<ResearchProgress['kind'], string> = { search: '🔎', fetch: '📄', note: '💬', status: '⚙️', live: '✍️' };
 const CODE_KEY: Record<NonNullable<ResearchProgress['code']>, MessageKey> = {
@@ -25,7 +22,7 @@ const label = (p: ResearchProgress, t: Translate) => (p.code ? t(CODE_KEY[p.code
 
 export function ResearchView(props: {
   request: ResearchRequest;
-  via: ResearchVia;
+  provider: ProviderId;
   onDone: (r: ResearchResult) => void;
   onBack: () => void;
 }) {
@@ -46,11 +43,7 @@ export function ResearchView(props: {
     setError(null);
     const tick = setInterval(() => setElapsed(Date.now() - started), 500);
     const onProgress = (p: ResearchProgress) => (p.kind === 'live' ? setLive(p) : setFeed((f) => [...f, p]));
-    const run =
-      props.via === 'api'
-        ? researchWithApiKey(props.request, getKey('anthropic'), onProgress, ac.signal)
-        : research(props.request, onProgress, ac.signal);
-    run
+    runResearch(props.provider, props.request, onProgress, ac.signal)
       .then((r) => onDone.current(r))
       .catch((e: Error) => {
         if (!ac.signal.aborted) setError(e.message);
@@ -60,7 +53,7 @@ export function ResearchView(props: {
       ac.abort();
       clearInterval(tick);
     };
-  }, [props.request, props.via, attempt]);
+  }, [props.request, props.provider, attempt]);
 
   const searches = feed.filter((f) => f.kind === 'search').length;
   const fetches = feed.filter((f) => f.kind === 'fetch').length;
@@ -68,7 +61,7 @@ export function ResearchView(props: {
   return (
     <div className="research">
       <div className="research-card">
-        <p className="eyebrow">{error ? t('researchFailed') : t('researching')}</p>
+        <p className="eyebrow">{error ? t('researchFailed') : t('researching', { name: PROVIDERS[props.provider].name })}</p>
         <h1>{props.request.topic}</h1>
         {!error && (
           <div className="research-meter" aria-hidden>
