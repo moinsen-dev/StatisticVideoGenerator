@@ -1,57 +1,54 @@
 # STATE — StatRace
 
-> **Frozen:** 2026-09-23 10:34
-> **Branch:** `main` (Remote `moinsen-dev/StatisticVideoGenerator`, privat)
-> **Last commit:** „feat: StatRace – KI-Statistikvideos vom Thema bis zum MP4“ + dieses STATE-Update
-> **Dirty:** clean
-> **Nebenbranch:** `idea-loop/monetarisierung`, enthält nur `brainstorm-monetarisierung.md`, bewusst nicht in `main`
+> **Frozen:** 2026-09-23 11:05
+> **Branch:** `main` · public: https://github.com/moinsen-dev/StatisticVideoGenerator (MIT)
+> **Live:** https://statrace.moinsen.dev (Cloudflare Pages, project `statrace`, static, BYOK)
+> **Last commit:** „feat: Open-Source-Release – BYOK im Browser, Oberfläche EN/DE, Beispiel-Galerie, MIT“ + this update
+> **Dirty:** clean · the local-only branch `idea-loop/monetarisierung` is deliberately not on GitHub
 
 ## Last work-unit
 
-**Entscheidung Uli, 2026-09-23: StatRace bleibt ein eigenes Werkzeug und wird nicht monetarisiert** (Option C).
-Grundlage ist die Monetarisierungsprüfung auf dem Nebenbranch.
+Open-source release and deploy (2026-09-23):
 
-- Der Markt „KI macht ein Bar-Chart-Race aus einem Thema“ ist besetzt:
-  - Alien Art Charts hat Musik, KI-Sprecher, 4K und MCP.
-  - Chartimator liefert KI-Zahlen mit Quellen, Flowi recherchiert selbst.
-  - „Die Konkurrenz ist schlechter“ ist unbelegt, weil nur Landingpages verglichen wurden, keine Videos.
-- Das Modell „BYOK + öffentliche Galerie + Werbung“ ist geprüft und gestorben: Öffentliche Gratis-Galerien
-  bringen Nutzung, aber kein Geld. Beispiele sind Many Eyes, Swivel, Plotly Chart Studio Cloud und Giphy.
-- Offen gewirkt haben, aber ungeprüft sind: Event-Recap (live beim Event, danach Video), Beleg-Export für
-  AI Act/YouTube, Recherche als MCP-Dienst.
+- **Research in the browser with the visitor's own Anthropic key.**
+  - Anthropic SDK with `dangerouslyAllowBrowser`, web search `web_search_20260209`, the dataset arrives
+    through the strict tool `submit_dataset`.
+  - Live check against the real API: a request with an invalid key comes back as a clean 401
+    (CORS and error handling work).
+  - A full run with a valid key has not been done yet.
+- **ElevenLabs with the visitor's own key**, called straight from the browser (the API allows CORS).
+- **UI in English and German**; progress arrives as language-neutral codes.
+- **Four examples** that play without a key: market cap (EN), smartphones (DE), CO₂ from OWID (EN),
+  population from World Bank data (DE).
+- **Repo public:** README (EN) with screenshots, CONTRIBUTING, MIT, green CI (typecheck + build),
+  Open Graph preview.
 
-Davor, 2026-09-22: Greenfield-Bau vom Thema bis zum MP4, in ca. 55 Min.
-- **Recherche:** `claude -p` mit WebSearch/WebFetch und SSE-Live-Fortschritt.
-- **Renderer:** Canvas in 16:9 und 9:16.
-- **Musik:** KI-Komposition als Web-Audio-Synth, ElevenLabs Music oder eigene Datei, jeweils mit SFX.
-- **Export:** MP4 über Mediabunny.
-- **Messwerte:** Recherche 3–4 min; 66 s in 1080p werden in 10 s gerendert; die Komposition von 68 s braucht 1,8 s.
+Before that, 2026-09-22: v1 from topic to MP4 via the local `claude` CLI; the decision is not to
+turn it into a commercial product.
 
 ## Next intended step
 
-Eigene Videos bauen und nutzen, dabei Look, Musik und Datenqualität verbessern. Erfolgskriterium: ein Video,
-das du ohne Nacharbeit veröffentlichen würdest, plus eine Liste der drei größten Störfaktoren.
-
-Nur falls C revidiert wird: Event-Recap als nächsten idea-loop-Lauf ansetzen (war die Empfehlung).
+Uli runs a full research once on https://statrace.moinsen.dev with his own Anthropic key.
+Success: a video with a dataset. If the API rejects the request body (400), the message shows up in
+the research view verbatim; the fix goes into `src/lib/research-byok.ts`.
 
 ## Open friction
 
-- Die Recherche dauert 2–5 min, meist fürs Schreiben des Datensatzes (~11k Zeichen). Hebel: `--effort`
-  testen oder erst die Zahlen, dann die Ereignisse recherchieren.
-- Die Daten sind Schätzungen aus Sekundärquellen. Die App zeigt Quellen und Hinweise, prüft aber nichts gegen.
-  Vor jeder Veröffentlichung die Zahlen im Daten-Tab gegenlesen und bevorzugt offene Quellen nutzen (OWID,
-  Weltbank; Statista nur mit Profi-Lizenz).
-- Die Recherche läuft über dein Claude-Abo und ist deshalb nur für den eigenen Gebrauch zulässig. Ein Dienst
-  für andere bräuchte die API (Abo-Logins in Drittprodukten verbietet Anthropic).
-- Emoji-Flaggen rendern auf macOS, unter Windows fehlen sie.
+- A research run takes 2–5 min, mostly for writing the dataset (~11k characters).
+- The figures are estimates from secondary sources. The app shows sources, and the prompt prefers open data.
+  Before publishing, check the numbers in the Data tab.
+- The local CLI mode uses your own subscription and is for your own use only; the hosted version uses BYOK.
+- Emoji flags render on macOS, but are missing on Windows.
+- `wrangler pages project create` needed `--force` once (wrangler 4.135 delegates Pages to Workers).
+  Redeploys run without it.
 
 ## Live context for the agent
 
-- **Heiße Dateien:** `src/engine/renderer.ts` (Look), `src/audio/composer.ts` (Musik), `server/prompt.ts` (Datenqualität)
-- **Haltung:** positiv überrascht von der Qualität, die Geschäftsfrage ist bewusst geschlossen
-- **Kalibrierung:** Der v1-Bau dauerte ~55 Min statt klassisch 2–3 Wochen (Datenpunkt in `~/.claude/refs/dna-calibration.md`)
+- **Hot files:** `src/lib/research-byok.ts`, `src/lib/i18n.ts`, `public/examples/`
+- **Deploy:** `npm run build && npx wrangler pages deploy dist --project-name statrace --branch main --commit-dirty=true`
+- **Calibration:** OSS release incl. BYOK, i18n, examples and deploy took ~30 min
 
-## Doku
+## Docs
 
-- `README.md`: Nutzung, Ablauf, Architektur · `CLAUDE.md`: Befehle, Trigger-Karte, feste Regeln
-- `brainstorm-monetarisierung.md` auf `idea-loop/monetarisierung`: Marktkarte, Friedhof, Gründe für C
+- `README.md`: product, local operation, privacy, architecture · `CONTRIBUTING.md`: rules for contributors
+- `CLAUDE.md`: commands, trigger map, fixed rules
