@@ -1,9 +1,9 @@
 # STATE — StatRace
 
-> **Frozen:** 2026-09-23 11:50
+> **Frozen:** 2026-09-23 12:45
 > **Branch:** `main` · public: https://github.com/moinsen-dev/StatisticVideoGenerator (MIT)
-> **Live:** https://statrace.moinsen.dev (Cloudflare Pages, project `statrace`, static, BYOK), **still without** landing page and OpenAI
-> **Last commit:** „feat: Landingpage, Einstellungsseite und OpenAI als zweiter Recherche-Anbieter“ (local, not pushed)
+> **Live:** https://statrace.moinsen.dev (Cloudflare Pages, project `statrace`, static, BYOK): landing page at `/`, studio at `/app`
+> **Last commit:** „feat: Landingpage, Einstellungsseite und OpenAI als zweiter Recherche-Anbieter“ (4a7fefc, pushed, CI green) + this update
 > **Dirty:** clean · the local-only branch `idea-loop/monetarisierung` is deliberately not on GitHub
 
 ## Last work-unit
@@ -30,8 +30,7 @@ Landing page, settings and a second AI provider (2026-09-23, ~40 min):
 
 ## Next intended step
 
-1. Uli approves push + deploy. The landing page advertises moinsen publicly.
-2. Run one full research each with a real Anthropic key and a real OpenAI key.
+1. Run one full research each with a real Anthropic key and a real OpenAI key on https://statrace.moinsen.dev/app.
    - Success: a video with a dataset.
    - If the API rejects the request (400), the message appears verbatim in the research view. The fix goes into `src/lib/research-<provider>.ts`.
 
