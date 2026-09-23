@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { KEYS, MUSIC_STYLES, type Dataset, type MusicSpec } from '../../shared/dataset.ts';
 import type { MusicSource } from '../audio/soundtrack.ts';
-import { generateMusic, getStatus } from '../lib/api.ts';
+import { generateMusic, generateMusicWithKey, getStatus } from '../lib/api.ts';
+import { useLang, useT, type MessageKey } from '../lib/i18n.ts';
+import { getKey, isRemembered, setKey } from '../lib/keys.ts';
 import type { Project, VideoSettings } from '../lib/project.ts';
 import { saveAudio } from '../lib/store.ts';
 import type { AudioState } from './Studio.tsx';
@@ -14,19 +16,11 @@ const STYLE_LABEL: Record<string, string> = {
   chiptune: 'Chiptune',
 };
 
-const SOURCES: { id: MusicSource; title: string; desc: string }[] = [
-  {
-    id: 'composition',
-    title: 'KI-Komposition',
-    desc: 'Claude hat Stil, Tempo, Tonart, Akkorde und eine Melodie komponiert. Der Browser spielt sie als Synthesizer, passend zu Intro, Breakdown und Finale. Kostenlos.',
-  },
-  {
-    id: 'ai',
-    title: 'AI-Musikgenerator',
-    desc: 'ElevenLabs Music erzeugt aus Claudes Prompt einen voll produzierten Instrumental-Track in exakt der Videolänge. Braucht einen bezahlten ElevenLabs-Plan.',
-  },
-  { id: 'upload', title: 'Eigene Datei', desc: 'MP3, WAV oder M4A, zum Beispiel aus Suno oder deiner Bibliothek. Längere Tracks werden am Ende ausgeblendet.' },
-  { id: 'none', title: 'Keine Musik', desc: 'Nur Soundeffekte oder ganz ohne Ton.' },
+const SOURCES: { id: MusicSource; title: MessageKey; desc: MessageKey }[] = [
+  { id: 'composition', title: 'srcComposition', desc: 'srcCompositionDesc' },
+  { id: 'ai', title: 'srcAi', desc: 'srcAiDesc' },
+  { id: 'upload', title: 'srcUpload', desc: 'srcUploadDesc' },
+  { id: 'none', title: 'srcNone', desc: 'srcNoneDesc' },
 ];
 
 export function MusicPanel(props: {
@@ -38,20 +32,26 @@ export function MusicPanel(props: {
   setDataset: (fn: (d: Dataset) => Dataset) => void;
   onAudioChanged: () => void;
 }) {
+  const t = useT();
+  const lang = useLang();
   const { project, setSettings } = props;
   const { settings } = project;
   const music = project.dataset.music;
-  const [elevenlabs, setElevenlabs] = useState<boolean | null>(null);
+  // true: the local server holds an ElevenLabs key; false: the visitor brings their own.
+  const [serverKey, setServerKey] = useState<boolean | null>(null);
+  const [elevenKey, setElevenKey] = useState(() => getKey('elevenlabs'));
+  const [remember, setRemember] = useState(() => isRemembered('elevenlabs') || !getKey('elevenlabs'));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    getStatus().then((s) => setElevenlabs(s.elevenlabs), () => setElevenlabs(false));
+    void getStatus().then((s) => setServerKey(Boolean(s?.elevenlabs)));
     return () => abort.current?.abort();
   }, []);
 
   const setMusic = (patch: Partial<MusicSpec>) => props.setDataset((d) => ({ ...d, music: { ...d.music, ...patch } }));
+  const canGenerate = serverKey === true || elevenKey.trim().length > 10;
 
   const generate = async () => {
     setBusy(true);
@@ -59,10 +59,21 @@ export function MusicPanel(props: {
     const ac = new AbortController();
     abort.current = ac;
     try {
-      const blob = await generateMusic(music.prompt, props.duration * 1000, ac.signal);
+      const durationMs = props.duration * 1000;
+      let blob: Blob;
+      if (serverKey) {
+        blob = await generateMusic(music.prompt, durationMs, ac.signal);
+      } else {
+        setKey('elevenlabs', elevenKey, remember);
+        blob = await generateMusicWithKey(elevenKey.trim(), music.prompt, durationMs, ac.signal);
+      }
       await saveAudio(project.id, 'ai', blob);
-      const label = `ElevenLabs · ${new Date().toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}`;
-      props.update((p) => ({ ...p, audio: { ...p.audio, ai: label }, settings: { ...p.settings, musicSource: 'ai' } }));
+      const stamp = new Date().toLocaleString(lang === 'de' ? 'de-DE' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' });
+      props.update((p) => ({
+        ...p,
+        audio: { ...p.audio, ai: `ElevenLabs · ${stamp}` },
+        settings: { ...p.settings, musicSource: 'ai' },
+      }));
       props.onAudioChanged();
     } catch (e) {
       if (!ac.signal.aborted) setError((e as Error).message);
@@ -79,7 +90,7 @@ export function MusicPanel(props: {
 
   return (
     <div className="stack">
-      <div className="choices" role="radiogroup" aria-label="Musikquelle">
+      <div className="choices" role="radiogroup" aria-label={t('musicSource')}>
         {SOURCES.map((s) => (
           <label key={s.id} className={`choice ${settings.musicSource === s.id ? 'on' : ''}`}>
             <input
@@ -89,8 +100,8 @@ export function MusicPanel(props: {
               onChange={() => setSettings({ musicSource: s.id })}
             />
             <span>
-              <strong>{s.title}</strong>
-              <small>{s.desc}</small>
+              <strong>{t(s.title)}</strong>
+              <small>{t(s.desc)}</small>
             </span>
           </label>
         ))}
@@ -100,7 +111,7 @@ export function MusicPanel(props: {
         <>
           <div className="grid2">
             <label className="field">
-              <span className="label">Stil</span>
+              <span className="label">{t('style')}</span>
               <select value={music.style} onChange={(e) => setMusic({ style: e.target.value as MusicSpec['style'] })}>
                 {MUSIC_STYLES.map((s) => (
                   <option key={s} value={s}>
@@ -110,7 +121,7 @@ export function MusicPanel(props: {
               </select>
             </label>
             <label className="field">
-              <span className="label">Tempo (BPM)</span>
+              <span className="label">{t('tempo')}</span>
               <input
                 type="number"
                 min={70}
@@ -123,7 +134,7 @@ export function MusicPanel(props: {
               />
             </label>
             <label className="field">
-              <span className="label">Tonart</span>
+              <span className="label">{t('key')}</span>
               <select value={music.key} onChange={(e) => setMusic({ key: e.target.value as MusicSpec['key'] })}>
                 {KEYS.map((k) => (
                   <option key={k} value={k}>
@@ -133,15 +144,18 @@ export function MusicPanel(props: {
               </select>
             </label>
             <label className="field">
-              <span className="label">Tongeschlecht</span>
+              <span className="label">{t('scale')}</span>
               <select value={music.scale} onChange={(e) => setMusic({ scale: e.target.value as MusicSpec['scale'] })}>
-                <option value="major">Dur</option>
-                <option value="minor">Moll</option>
+                <option value="major">{t('major')}</option>
+                <option value="minor">{t('minor')}</option>
               </select>
             </label>
           </div>
           <p className="hint">
-            Akkordstufen {music.progression.join(' · ')} · Melodie {music.motif.map((d) => (d ? d : '–')).join(' ')}
+            {t('chordsHint', {
+              chords: music.progression.join(' · '),
+              motif: music.motif.map((d) => (d ? d : '–')).join(' '),
+            })}
           </p>
         </>
       )}
@@ -149,29 +163,50 @@ export function MusicPanel(props: {
       {settings.musicSource === 'ai' && (
         <>
           <label className="field">
-            <span className="label">Prompt für den Musikgenerator</span>
+            <span className="label">{t('musicPrompt')}</span>
             <textarea rows={5} value={music.prompt} onChange={(e) => setMusic({ prompt: e.target.value })} />
           </label>
+          {serverKey === false && (
+            <div className="key-field">
+              <label className="field">
+                <span className="label">
+                  {t('elevenKey')}
+                  <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noreferrer">
+                    {t('keyCreate')} ↗
+                  </a>
+                </span>
+                <input
+                  type="password"
+                  value={elevenKey}
+                  onChange={(e) => setElevenKey(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </label>
+              <label className="check">
+                <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+                {t('keyRemember')}
+              </label>
+              <p className="hint">{t('elevenKeyHint')}</p>
+            </div>
+          )}
           <div className="row-actions">
-            <button type="button" className="primary" disabled={busy || !elevenlabs} onClick={generate}>
-              {busy ? 'Track wird komponiert …' : `Track generieren (${Math.round(props.duration)} s)`}
+            <button type="button" className="primary" disabled={busy || !canGenerate} onClick={generate}>
+              {busy ? t('generating') : t('generate', { seconds: Math.round(props.duration) })}
             </button>
             {busy && (
               <button type="button" className="ghost" onClick={() => abort.current?.abort()}>
-                Abbrechen
+                {t('cancel')}
               </button>
             )}
           </div>
-          {elevenlabs === false && (
-            <p className="hint">Kein ELEVENLABS_API_KEY auf dem Server. In `.env` eintragen und `npm run dev` neu starten.</p>
-          )}
-          {project.audio.ai ? <p className="hint">Aktueller Track: {project.audio.ai}</p> : <p className="hint">Noch kein Track erzeugt.</p>}
+          <p className="hint">{project.audio.ai ? t('currentTrack', { name: project.audio.ai }) : t('noTrack')}</p>
         </>
       )}
 
       {settings.musicSource === 'upload' && (
         <label className="field">
-          <span className="label">Audiodatei</span>
+          <span className="label">{t('audioFile')}</span>
           <input
             type="file"
             accept="audio/*"
@@ -180,13 +215,13 @@ export function MusicPanel(props: {
               if (f) void upload(f);
             }}
           />
-          {project.audio.upload && <span className="hint">Aktuell: {project.audio.upload}</span>}
+          {project.audio.upload && <span className="hint">{t('current', { name: project.audio.upload })}</span>}
         </label>
       )}
 
       <label className="field">
         <span className="label">
-          Musik <b>{Math.round(settings.musicVolume * 100)} %</b>
+          {t('musicVolume')} <b>{Math.round(settings.musicVolume * 100)} %</b>
         </span>
         <input
           type="range"
@@ -199,12 +234,12 @@ export function MusicPanel(props: {
       </label>
       <label className="check">
         <input type="checkbox" checked={settings.sfx} onChange={(e) => setSettings({ sfx: e.target.checked })} />
-        Soundeffekte: Start-Impact, Whoosh pro Karte, Fanfare bei neuem Platz 1
+        {t('sfx')}
       </label>
       {settings.sfx && (
         <label className="field">
           <span className="label">
-            Effekte <b>{Math.round(settings.sfxVolume * 100)} %</b>
+            {t('sfxVolume')} <b>{Math.round(settings.sfxVolume * 100)} %</b>
           </span>
           <input
             type="range"

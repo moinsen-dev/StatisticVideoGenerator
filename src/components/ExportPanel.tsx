@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RaceModel } from '../engine/model.ts';
 import { FRAME } from '../engine/renderer.ts';
+import { useT } from '../lib/i18n.ts';
 import { fileSlug, type Project, type VideoSettings } from '../lib/project.ts';
 import type { AudioState } from './Studio.tsx';
 
@@ -13,6 +14,7 @@ export function ExportPanel(props: {
   setSettings: (patch: Partial<VideoSettings>) => void;
   onBeforeExport: () => void;
 }) {
+  const t = useT();
   const { settings, dataset } = props.project;
   const [progress, setProgress] = useState<{ done: number; total: number; started: number } | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -66,7 +68,7 @@ export function ExportPanel(props: {
   return (
     <div className="stack">
       <div className="field">
-        <span className="label">Bildrate</span>
+        <span className="label">{t('frameRate')}</span>
         <div className="seg">
           {([30, 60] as const).map((fps) => (
             <button
@@ -82,14 +84,17 @@ export function ExportPanel(props: {
         </div>
       </div>
       <p className="hint">
-        MP4 · H.264 · {W}×{H} · {Math.round(props.model.duration)} s ·{' '}
-        {props.audio.buffer ? 'mit Ton (AAC)' : 'ohne Ton'}. Gerendert wird Bild für Bild im Browser, unabhängig von der
-        Abspielgeschwindigkeit.
+        {t('exportInfo', {
+          w: W,
+          h: H,
+          seconds: Math.round(props.model.duration),
+          audio: props.audio.buffer ? t('withAudio') : t('withoutAudio'),
+        })}
       </p>
 
       {!progress && (
         <button type="button" className="primary" onClick={run} disabled={props.audio.status === 'working'}>
-          {props.audio.status === 'working' ? 'Warte auf Soundtrack …' : 'MP4 exportieren'}
+          {props.audio.status === 'working' ? t('waitAudio') : t('exportMp4')}
         </button>
       )}
       {progress && (
@@ -98,11 +103,11 @@ export function ExportPanel(props: {
             <i style={{ width: `${pct}%` }} />
           </div>
           <p className="hint">
-            {pct} % · Bild {progress.done} von {progress.total}
-            {eta !== null && ` · noch ca. ${eta} s`}
+            {t('exportProgress', { pct, done: progress.done, total: progress.total })}
+            {eta !== null && t('exportEta', { seconds: eta })}
           </p>
           <button type="button" className="ghost" onClick={() => abort.current?.abort()}>
-            Abbrechen
+            {t('cancel')}
           </button>
         </div>
       )}
@@ -113,9 +118,7 @@ export function ExportPanel(props: {
           <a className="primary as-button" href={result.url} download={result.name}>
             ⤓ {result.name}
           </a>
-          <p className="hint">
-            {(result.size / 1e6).toFixed(1)} MB · gerendert in {Math.round(result.seconds)} s
-          </p>
+          <p className="hint">{t('exportDone', { mb: (result.size / 1e6).toFixed(1), seconds: Math.round(result.seconds) })}</p>
         </div>
       )}
     </div>

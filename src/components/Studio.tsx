@@ -4,25 +4,28 @@ import { audioPlan, buildSoundtrack } from '../audio/soundtrack.ts';
 import { Transport } from '../audio/transport.ts';
 import { buildModel } from '../engine/model.ts';
 import { FRAME, Renderer } from '../engine/renderer.ts';
+import { useT } from '../lib/i18n.ts';
 import { fileSlug, type Project, type VideoSettings } from '../lib/project.ts';
 import { loadAudio, saveProject } from '../lib/store.ts';
 import { DataPanel } from './DataPanel.tsx';
+import { LangSwitch } from './LangSwitch.tsx';
 import { ExportPanel } from './ExportPanel.tsx';
 import { MusicPanel } from './MusicPanel.tsx';
 
 type Tab = 'video' | 'data' | 'music' | 'export';
-const TABS: [Tab, string][] = [
-  ['video', 'Video'],
-  ['data', 'Daten'],
-  ['music', 'Musik'],
-  ['export', 'Export'],
-];
+const TABS = [
+  ['video', 'tabVideo'],
+  ['data', 'tabData'],
+  ['music', 'tabMusic'],
+  ['export', 'tabExport'],
+] as const;
 
 export type AudioState = { buffer: AudioBuffer | null; status: 'working' | 'ready' | 'error'; message: string | null };
 
 const clock = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
 export function Studio({ initial, onClose }: { initial: Project; onClose: () => void }) {
+  const t = useT();
   const [project, setProject] = useState(initial);
   const [tab, setTab] = useState<Tab>('video');
   const update = useCallback(
@@ -101,11 +104,7 @@ export function Studio({ initial, onClose }: { initial: Project; onClose: () => 
         });
         if (!alive) return;
         transport.setBuffer(buffer);
-        setAudio({
-          buffer,
-          status: 'ready',
-          message: kind && !blob ? 'Für diese Musikquelle gibt es noch keine Datei.' : null,
-        });
+        setAudio({ buffer, status: 'ready', message: kind && !blob ? 'noFile' : null });
       } catch (e) {
         if (alive) setAudio({ buffer: null, status: 'error', message: (e as Error).message });
       }
@@ -173,10 +172,14 @@ export function Studio({ initial, onClose }: { initial: Project; onClose: () => 
   const { W, H } = FRAME[settings.format];
   const audioText =
     audio.status === 'working'
-      ? 'Soundtrack wird erzeugt …'
+      ? t('audioWorking')
       : audio.status === 'error'
-        ? `Audio-Fehler: ${audio.message}`
-        : (audio.message ?? (audio.buffer ? 'Soundtrack bereit · Leertaste spielt ab' : 'Ohne Ton · Leertaste spielt ab'));
+        ? t('audioError', { message: audio.message ?? '' })
+        : audio.message === 'noFile'
+          ? t('audioNoFile')
+          : audio.buffer
+            ? t('audioReady')
+            : t('audioNone');
 
   return (
     <div className="studio">
@@ -189,14 +192,15 @@ export function Studio({ initial, onClose }: { initial: Project; onClose: () => 
             onClose();
           }}
         >
-          ← Neues Thema
+          {t('newTopic')}
         </button>
         <div className="studio-title">
           <strong>{dataset.title}</strong>
           <span>{project.topic}</span>
         </div>
+        <LangSwitch />
         <button type="button" className="ghost" onClick={downloadJson}>
-          JSON sichern
+          {t('saveJson')}
         </button>
       </header>
 
@@ -216,7 +220,7 @@ export function Studio({ initial, onClose }: { initial: Project; onClose: () => 
               type="button"
               className="play"
               onClick={() => transport.toggle()}
-              aria-label={playing ? 'Pause' : 'Abspielen'}
+              aria-label={playing ? t('pause') : t('play')}
             >
               {playing ? '❚❚' : '▶'}
             </button>
@@ -228,7 +232,7 @@ export function Studio({ initial, onClose }: { initial: Project; onClose: () => 
                 max={model.duration}
                 step={0.01}
                 defaultValue={0}
-                aria-label="Zeitleiste"
+                aria-label={t('timeline')}
                 onPointerDown={() => (scrubbing.current = true)}
                 onPointerUp={() => (scrubbing.current = false)}
                 onInput={(e) => transport.seek(Number(e.currentTarget.value))}
@@ -251,7 +255,7 @@ export function Studio({ initial, onClose }: { initial: Project; onClose: () => 
 
         <aside className="panel">
           <nav className="tabs" role="tablist">
-            {TABS.map(([id, label]) => (
+            {TABS.map(([id, labelKey]) => (
               <button
                 type="button"
                 key={id}
@@ -260,7 +264,7 @@ export function Studio({ initial, onClose }: { initial: Project; onClose: () => 
                 className={tab === id ? 'active' : ''}
                 onClick={() => setTab(id)}
               >
-                {label}
+                {t(labelKey)}
               </button>
             ))}
           </nav>
@@ -301,31 +305,32 @@ function VideoPanel(props: {
   setSettings: (patch: Partial<VideoSettings>) => void;
   maxBars: number;
 }) {
+  const t = useT();
   const { settings, research } = props.project;
   return (
     <div className="stack">
       <div className="field">
-        <span className="label">Format</span>
+        <span className="label">{t('format')}</span>
         <div className="seg">
           <button
             type="button"
             className={settings.format === 'landscape' ? 'on' : ''}
             onClick={() => props.setSettings({ format: 'landscape' })}
           >
-            16:9 · YouTube
+            {t('formatLandscape')}
           </button>
           <button
             type="button"
             className={settings.format === 'portrait' ? 'on' : ''}
             onClick={() => props.setSettings({ format: 'portrait' })}
           >
-            9:16 · Shorts, Reels
+            {t('formatPortrait')}
           </button>
         </div>
       </div>
       <label className="field">
         <span className="label">
-          Länge <b>{settings.duration} s</b>
+          {t('length')} <b>{settings.duration} s</b>
         </span>
         <input
           type="range"
@@ -338,7 +343,7 @@ function VideoPanel(props: {
       </label>
       <label className="field">
         <span className="label">
-          Sichtbare Balken <b>{settings.bars}</b>
+          {t('visibleBars')} <b>{settings.bars}</b>
         </span>
         <input
           type="range"
@@ -349,11 +354,16 @@ function VideoPanel(props: {
           onChange={(e) => props.setSettings({ bars: Number(e.target.value) })}
         />
       </label>
-      <p className="hint">Intro 3 s, Rennen, Endstand 5 s. Leertaste spielt ab, Pfeiltasten springen 3 s.</p>
+      <p className="hint">{t('videoHint')}</p>
       {research && (
         <p className="hint">
-          Recherche: {research.model} · {research.searches} Suchen · {research.fetches} Seiten ·{' '}
-          {Math.round(research.durationMs / 1000)} s
+          {t('researchMeta', {
+            model: research.model,
+            searches: research.searches,
+            fetches: research.fetches,
+            seconds: Math.round(research.durationMs / 1000),
+          })}
+          {research.costUsd !== null && t('researchCost', { cost: research.costUsd.toFixed(2) })}
         </p>
       )}
     </div>

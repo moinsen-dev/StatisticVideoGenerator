@@ -1,47 +1,84 @@
 import { useEffect, useRef, useState } from 'react';
 import { parseDataset, type ResearchRequest, type ServerStatus } from '../../shared/dataset.ts';
 import { getStatus } from '../lib/api.ts';
+import { useLang, useT } from '../lib/i18n.ts';
+import { getKey, isRemembered, setKey } from '../lib/keys.ts';
 import { newProject, type Project } from '../lib/project.ts';
 import { deleteProject, listProjects, type ProjectMeta } from '../lib/store.ts';
+import { LangSwitch } from './LangSwitch.tsx';
 
-const EXAMPLES = [
-  'Smartphone-Nutzer nach Ländern, 2000 bis heute',
-  'Die wertvollsten Unternehmen der Welt nach Börsenwert, 1995–2025',
-  'Bevölkerungsreichste Städte der Welt, 1950 bis heute',
-  'Meistabonnierte YouTube-Kanäle, 2010–2025',
-  'CO₂-Ausstoß nach Ländern, 1990 bis heute',
-  'Beliebteste Programmiersprachen, 2005–2025',
-];
+export type ResearchVia = 'cli' | 'api';
+
+export const REPO_URL = 'https://github.com/moinsen-dev/StatisticVideoGenerator';
+
+type Example = { file: string; title: string; subtitle: string; language: 'de' | 'en'; bars: number; icons: string[] };
+
+const TOPICS = {
+  de: [
+    'Smartphone-Nutzer nach Ländern, 2000 bis heute',
+    'Die wertvollsten Unternehmen der Welt nach Börsenwert, 1995–2025',
+    'Bevölkerungsreichste Städte der Welt, 1950 bis heute',
+    'Meistabonnierte YouTube-Kanäle, 2010–2025',
+    'CO₂-Ausstoß nach Ländern, 1990 bis heute',
+    'Beliebteste Programmiersprachen, 2005–2025',
+  ],
+  en: [
+    'Smartphone users by country, 2000 to today',
+    'The world’s most valuable companies by market cap, 1995–2025',
+    'Most populous cities in the world, 1950 to today',
+    'Most subscribed YouTube channels, 2010–2025',
+    'CO₂ emissions by country, 1990 to today',
+    'Most popular programming languages, 2005–2025',
+  ],
+};
 
 export function Home(props: {
-  onStart: (req: ResearchRequest) => void;
+  onStart: (req: ResearchRequest, via: ResearchVia) => void;
   onOpen: (id: string) => void;
   onImport: (project: Project) => void;
 }) {
+  const t = useT();
+  const lang = useLang();
   const [topic, setTopic] = useState('');
-  const [language, setLanguage] = useState<'de' | 'en'>('de');
+  const [language, setLanguage] = useState<'de' | 'en'>(lang);
   const [bars, setBars] = useState(10);
   const [depth, setDepth] = useState<'fast' | 'thorough'>('fast');
-  const [status, setStatus] = useState<ServerStatus | null>(null);
-  const [statusError, setStatusError] = useState<string | null>(null);
+  const [status, setStatus] = useState<ServerStatus | null | undefined>(undefined);
+  const [via, setVia] = useState<ResearchVia>('api');
+  const [apiKey, setApiKey] = useState(() => getKey('anthropic'));
+  const [remember, setRemember] = useState(() => isRemembered('anthropic') || !getKey('anthropic'));
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
+  const [examples, setExamples] = useState<Example[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    getStatus().then(setStatus, (e: Error) => setStatusError(e.message));
+    void getStatus().then((s) => {
+      setStatus(s);
+      if (s?.claude.available && s.claude.loggedIn) setVia('cli');
+    });
     void listProjects().then(setProjects);
+    fetch('/examples/index.json')
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setExamples, () => setExamples([]));
   }, []);
 
-  const ready = status?.claude.available && status.claude.loggedIn;
-  const canStart = topic.trim().length >= 3 && ready;
+  const cliReady = Boolean(status?.claude.available && status.claude.loggedIn);
+  const keyReady = apiKey.trim().startsWith('sk-');
+  const canStart = topic.trim().length >= 3 && (via === 'cli' ? cliReady : keyReady);
+
+  const openExample = async (ex: Example) => {
+    const res = await fetch(`/examples/${ex.file}`);
+    const dataset = parseDataset(await res.json());
+    props.onImport(newProject(ex.title, dataset, null, ex.bars));
+  };
 
   const importFile = async (file: File) => {
     setImportError(null);
     try {
       const json = JSON.parse(await file.text());
       const dataset = parseDataset(json.dataset ?? json);
-      props.onImport(newProject(file.name.replace(/\.json$/i, ''), dataset, null, 10));
+      props.onImport(newProject(json.topic ?? file.name.replace(/\.json$/i, ''), dataset, null, 10));
     } catch (e) {
       setImportError((e as Error).message);
     }
@@ -56,21 +93,22 @@ export function Home(props: {
           <i style={{ height: '75%' }} />
         </span>
         <span className="brand-name">StatRace</span>
-        <span className="brand-tag">KI-Statistikvideos</span>
+        <span className="brand-tag">{t('tagline')}</span>
+        <span className="spacer" />
+        <LangSwitch />
       </header>
 
       <main className="home-main">
-        <h1>Welche Statistik soll zum Video werden?</h1>
-        <p className="lead">
-          Claude recherchiert Zahlen, Ereignisse und Quellen. Daraus entsteht ein animiertes Balkenrennen mit
-          Fun-Facts und Soundtrack, fertig als MP4.
-        </p>
+        <h1>{t('heroTitle')}</h1>
+        <p className="lead">{t('heroLead')}</p>
 
         <form
           className="topic-card"
           onSubmit={(e) => {
             e.preventDefault();
-            if (canStart) props.onStart({ topic: topic.trim(), language, bars, depth });
+            if (!canStart) return;
+            if (via === 'api') setKey('anthropic', apiKey, remember);
+            props.onStart({ topic: topic.trim(), language, bars, depth }, via);
           }}
         >
           <textarea
@@ -79,28 +117,69 @@ export function Home(props: {
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && canStart) e.currentTarget.form?.requestSubmit();
             }}
-            placeholder="z. B. Smartphone-Nutzer nach Ländern, 2000 bis heute"
+            placeholder={t('topicPlaceholder')}
             rows={3}
             autoFocus
-            aria-label="Thema"
+            aria-label={t('topicLabel')}
           />
           <div className="chips">
-            {EXAMPLES.map((ex) => (
+            {TOPICS[lang].map((ex) => (
               <button type="button" key={ex} className="chip" onClick={() => setTopic(ex)}>
                 {ex}
               </button>
             ))}
           </div>
+
+          {status !== undefined && (
+            <div className="via">
+              {cliReady && (
+                <div className="seg" role="radiogroup" aria-label={t('via')}>
+                  <button type="button" className={via === 'cli' ? 'on' : ''} onClick={() => setVia('cli')}>
+                    {t('viaCli')}
+                  </button>
+                  <button type="button" className={via === 'api' ? 'on' : ''} onClick={() => setVia('api')}>
+                    {t('viaApi')}
+                  </button>
+                </div>
+              )}
+              {via === 'api' && (
+                <div className="key-field">
+                  <label className="field">
+                    <span className="label">
+                      {t('keyLabel')}
+                      <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">
+                        {t('keyCreate')} ↗
+                      </a>
+                    </span>
+                    <input
+                      type="password"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="sk-ant-…"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                  </label>
+                  <label className="check">
+                    <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+                    {t('keyRemember')}
+                  </label>
+                  <p className="hint">{t('keyHint')}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="topic-options">
             <label>
-              Sprache
+              {t('videoLanguage')}
               <select value={language} onChange={(e) => setLanguage(e.target.value as 'de' | 'en')}>
                 <option value="de">Deutsch</option>
                 <option value="en">English</option>
               </select>
             </label>
             <label>
-              Balken
+              {t('bars')}
               <select value={bars} onChange={(e) => setBars(Number(e.target.value))}>
                 {[5, 8, 10, 12, 15].map((n) => (
                   <option key={n} value={n}>
@@ -110,41 +189,55 @@ export function Home(props: {
               </select>
             </label>
             <label>
-              Recherche
+              {t('depth')}
               <select value={depth} onChange={(e) => setDepth(e.target.value as 'fast' | 'thorough')}>
-                <option value="fast">Schnell · Sonnet</option>
-                <option value="thorough">Gründlich · Opus</option>
+                <option value="fast">{t('depthFast')}</option>
+                <option value="thorough">{t('depthThorough')}</option>
               </select>
             </label>
             <button className="primary" disabled={!canStart}>
-              Recherchieren &amp; Video bauen
+              {t('start')}
             </button>
           </div>
         </form>
 
-        <p className="server-status">
-          {statusError && <span className="bad">Server nicht erreichbar: {statusError}</span>}
-          {status && (
-            <>
-              <span className={ready ? 'good' : 'bad'}>
-                {ready
-                  ? `Recherche über dein Claude-Abo (${status.claude.subscription ?? 'angemeldet'}, CLI ${status.claude.version})`
-                  : status.claude.available
-                    ? 'Claude CLI nicht angemeldet – im Terminal `claude` starten und einloggen'
-                    : 'Claude CLI nicht gefunden – Claude Code installieren'}
-              </span>
-              <span className={status.elevenlabs ? 'good' : 'muted'}>
-                {status.elevenlabs ? 'ElevenLabs Music bereit' : 'ElevenLabs optional (ELEVENLABS_API_KEY)'}
-              </span>
-            </>
-          )}
-        </p>
+        {status && (
+          <p className="server-status">
+            <span className={cliReady ? 'good' : 'bad'}>
+              {cliReady
+                ? t('cliReady', { subscription: status.claude.subscription ?? '', version: status.claude.version ?? '' })
+                : t('cliMissing')}
+            </span>
+            {status.elevenlabs && <span className="good">{t('elevenReady')}</span>}
+          </p>
+        )}
+
+        {examples.length > 0 && (
+          <section className="examples">
+            <h2>{t('examples')}</h2>
+            <p className="hint">{t('examplesHint')}</p>
+            <ul>
+              {examples.map((ex) => (
+                <li key={ex.file}>
+                  <button type="button" className="example" onClick={() => void openExample(ex)}>
+                    <span className="example-icons" aria-hidden>
+                      {ex.icons.join(' ')}
+                    </span>
+                    <strong>{ex.title}</strong>
+                    <span>{ex.subtitle}</span>
+                    <em>{ex.language.toUpperCase()}</em>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="projects">
           <div className="projects-head">
-            <h2>Deine Videos</h2>
+            <h2>{t('yourVideos')}</h2>
             <button type="button" className="ghost" onClick={() => fileRef.current?.click()}>
-              JSON importieren
+              {t('importJson')}
             </button>
             <input
               ref={fileRef}
@@ -160,7 +253,7 @@ export function Home(props: {
           </div>
           {importError && <p className="error">{importError}</p>}
           {projects.length === 0 ? (
-            <p className="muted">Noch keine Projekte. Das erste entsteht aus deinem Thema oben.</p>
+            <p className="muted">{t('noProjects')}</p>
           ) : (
             <ul>
               {projects.map((p) => (
@@ -168,15 +261,20 @@ export function Home(props: {
                   <button type="button" className="project" onClick={() => props.onOpen(p.id)}>
                     <strong>{p.title}</strong>
                     <span>{p.topic}</span>
-                    <time>{new Date(p.updatedAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' })}</time>
+                    <time>
+                      {new Date(p.updatedAt).toLocaleString(lang === 'de' ? 'de-DE' : 'en-GB', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      })}
+                    </time>
                   </button>
                   <button
                     type="button"
                     className="icon-btn"
-                    title="Löschen"
-                    aria-label={`${p.title} löschen`}
+                    title={t('delete')}
+                    aria-label={`${p.title}: ${t('delete')}`}
                     onClick={async () => {
-                      if (!confirm(`„${p.title}“ löschen?`)) return;
+                      if (!confirm(t('deleteConfirm', { title: p.title }))) return;
                       await deleteProject(p.id);
                       setProjects(await listProjects());
                     }}
@@ -189,6 +287,16 @@ export function Home(props: {
           )}
         </section>
       </main>
+
+      <footer className="home-footer">
+        <a href={REPO_URL} target="_blank" rel="noreferrer">
+          {t('footer')}
+        </a>
+        <span>·</span>
+        <a href="https://moinsen.dev" target="_blank" rel="noreferrer">
+          moinsen.dev
+        </a>
+      </footer>
     </div>
   );
 }

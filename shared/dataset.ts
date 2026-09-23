@@ -183,7 +183,14 @@ export const ResearchRequestSchema = z.object({
 export type ResearchRequest = z.infer<typeof ResearchRequestSchema>;
 
 /** `live` replaces the previous live line (e.g. a growing character count) instead of adding one. */
-export type ResearchProgress = { kind: 'status' | 'search' | 'fetch' | 'note' | 'live'; text: string; at: number };
+export type ResearchProgress = {
+  kind: 'status' | 'search' | 'fetch' | 'note' | 'live';
+  text: string;
+  at: number;
+  /** language-neutral status; the UI translates it and falls back to `text` */
+  code?: 'start' | 'assembling' | 'checking' | 'writing' | 'thinking' | 'done';
+  vars?: Record<string, string | number>;
+};
 
 export type ResearchMeta = {
   model: string;

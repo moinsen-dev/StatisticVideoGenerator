@@ -1,17 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ResearchProgress, ResearchRequest, ResearchResult } from '../../shared/dataset.ts';
 import { research } from '../lib/api.ts';
+import { useT, type MessageKey, type Translate } from '../lib/i18n.ts';
+import { getKey } from '../lib/keys.ts';
+import { researchWithApiKey } from '../lib/research-byok.ts';
+import type { ResearchVia } from './Home.tsx';
 
 const ICON: Record<ResearchProgress['kind'], string> = { search: '🔎', fetch: '📄', note: '💬', status: '⚙️', live: '✍️' };
+const CODE_KEY: Record<NonNullable<ResearchProgress['code']>, MessageKey> = {
+  start: 'pStart',
+  assembling: 'pAssembling',
+  checking: 'pChecking',
+  writing: 'pWriting',
+  thinking: 'pThinking',
+  done: 'pDone',
+};
 
 const mmss = (ms: number) => {
   const s = Math.floor(ms / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
 
-export function ResearchView(props: { request: ResearchRequest; onDone: (r: ResearchResult) => void; onBack: () => void }) {
+const label = (p: ResearchProgress, t: Translate) => (p.code ? t(CODE_KEY[p.code], p.vars) : p.text);
+
+export function ResearchView(props: {
+  request: ResearchRequest;
+  via: ResearchVia;
+  onDone: (r: ResearchResult) => void;
+  onBack: () => void;
+}) {
+  const t = useT();
   const [feed, setFeed] = useState<ResearchProgress[]>([]);
-  const [live, setLive] = useState<string | null>(null);
+  const [live, setLive] = useState<ResearchProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [attempt, setAttempt] = useState(0);
@@ -25,11 +45,12 @@ export function ResearchView(props: { request: ResearchRequest; onDone: (r: Rese
     setLive(null);
     setError(null);
     const tick = setInterval(() => setElapsed(Date.now() - started), 500);
-    research(
-      props.request,
-      (p) => (p.kind === 'live' ? setLive(p.text) : setFeed((f) => [...f, p])),
-      ac.signal,
-    )
+    const onProgress = (p: ResearchProgress) => (p.kind === 'live' ? setLive(p) : setFeed((f) => [...f, p]));
+    const run =
+      props.via === 'api'
+        ? researchWithApiKey(props.request, getKey('anthropic'), onProgress, ac.signal)
+        : research(props.request, onProgress, ac.signal);
+    run
       .then((r) => onDone.current(r))
       .catch((e: Error) => {
         if (!ac.signal.aborted) setError(e.message);
@@ -39,7 +60,7 @@ export function ResearchView(props: { request: ResearchRequest; onDone: (r: Rese
       ac.abort();
       clearInterval(tick);
     };
-  }, [props.request, attempt]);
+  }, [props.request, props.via, attempt]);
 
   const searches = feed.filter((f) => f.kind === 'search').length;
   const fetches = feed.filter((f) => f.kind === 'fetch').length;
@@ -47,7 +68,7 @@ export function ResearchView(props: { request: ResearchRequest; onDone: (r: Rese
   return (
     <div className="research">
       <div className="research-card">
-        <p className="eyebrow">{error ? 'Recherche fehlgeschlagen' : 'Claude recherchiert'}</p>
+        <p className="eyebrow">{error ? t('researchFailed') : t('researching')}</p>
         <h1>{props.request.topic}</h1>
         {!error && (
           <div className="research-meter" aria-hidden>
@@ -57,17 +78,17 @@ export function ResearchView(props: { request: ResearchRequest; onDone: (r: Rese
           </div>
         )}
         <p className="research-stats">
-          {mmss(elapsed)} · {searches} Suchen · {fetches} Seiten gelesen
-          {!error && <> · meist 2–5 Minuten</>}
+          {t('researchStats', { time: mmss(elapsed), searches, fetches })}
+          {!error && t('researchUsual')}
         </p>
-        {live && !error && <p className="research-live">✍️ {live}</p>}
+        {live && !error && <p className="research-live">✍️ {label(live, t)}</p>}
         <ol className="feed">
           {feed.map((f, i) => (
             <li key={i} className={`feed-${f.kind}`}>
               <span className="feed-icon" aria-hidden>
                 {ICON[f.kind]}
               </span>
-              <span className="feed-text">{f.text}</span>
+              <span className="feed-text">{label(f, t)}</span>
               <time>{mmss(f.at)}</time>
             </li>
           ))}
@@ -75,11 +96,11 @@ export function ResearchView(props: { request: ResearchRequest; onDone: (r: Rese
         {error && <p className="error">{error}</p>}
         <div className="research-actions">
           <button type="button" className="ghost" onClick={props.onBack}>
-            {error ? 'Zurück' : 'Abbrechen'}
+            {error ? t('back') : t('cancel')}
           </button>
           {error && (
             <button type="button" className="primary" onClick={() => setAttempt((a) => a + 1)}>
-              Nochmal versuchen
+              {t('retry')}
             </button>
           )}
         </div>

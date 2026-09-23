@@ -1,9 +1,15 @@
 import type { ResearchProgress, ResearchRequest, ResearchResult, ServerStatus } from '../../shared/dataset.ts';
+import { ELEVENLABS_MUSIC_URL, musicRequestBody } from '../../shared/elevenlabs.ts';
 
-export async function getStatus(): Promise<ServerStatus> {
-  const res = await fetch('/api/status');
-  if (!res.ok) throw new Error(`Server antwortet nicht (${res.status})`);
-  return res.json();
+/** null = no local server (static hosting): research and music run with the visitor's own keys. */
+export async function getStatus(): Promise<ServerStatus | null> {
+  try {
+    const res = await fetch('/api/status');
+    if (!res.ok || !res.headers.get('content-type')?.includes('application/json')) return null;
+    return (await res.json()) as ServerStatus;
+  } catch {
+    return null;
+  }
 }
 
 /** POST + server-sent events: progress while Claude researches, then the dataset. */
@@ -54,5 +60,17 @@ export async function generateMusic(prompt: string, durationMs: number, signal: 
     const body = await res.json().catch(() => null);
     throw new Error(body?.message ?? `Musik-Generator: Fehler ${res.status}`);
   }
+  return res.blob();
+}
+
+/** Visitor's own ElevenLabs key, straight from the browser (the API allows CORS). */
+export async function generateMusicWithKey(apiKey: string, prompt: string, durationMs: number, signal: AbortSignal): Promise<Blob> {
+  const res = await fetch(ELEVENLABS_MUSIC_URL, {
+    method: 'POST',
+    headers: { 'xi-api-key': apiKey, 'content-type': 'application/json' },
+    body: musicRequestBody(prompt, durationMs),
+    signal,
+  });
+  if (!res.ok) throw new Error(`ElevenLabs ${res.status}: ${(await res.text()).slice(0, 300)}`);
   return res.blob();
 }

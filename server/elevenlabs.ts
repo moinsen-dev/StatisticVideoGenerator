@@ -1,4 +1,6 @@
-// Optional AI music generator: ElevenLabs Music (paid plan). Instrumental track with the exact video length.
+import { ELEVENLABS_MUSIC_URL, musicRequestBody } from '../shared/elevenlabs.ts';
+
+// Optional AI music generator on the local server: ElevenLabs Music with the key from .env.
 
 export class HttpError extends Error {
   readonly status: 400 | 502;
@@ -11,15 +13,10 @@ export class HttpError extends Error {
 export async function composeMusic(prompt: string, durationMs: number): Promise<Response> {
   const key = process.env.ELEVENLABS_API_KEY;
   if (!key) throw new HttpError('Kein ELEVENLABS_API_KEY in .env gesetzt.', 400);
-  const res = await fetch('https://api.elevenlabs.io/v1/music?output_format=mp3_48000_192', {
+  const res = await fetch(ELEVENLABS_MUSIC_URL, {
     method: 'POST',
     headers: { 'xi-api-key': key, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      prompt,
-      music_length_ms: Math.round(Math.min(300_000, Math.max(3_000, durationMs))),
-      model_id: process.env.ELEVENLABS_MUSIC_MODEL ?? 'music_v2_5',
-      force_instrumental: true,
-    }),
+    body: musicRequestBody(prompt, durationMs, process.env.ELEVENLABS_MUSIC_MODEL),
   });
   if (!res.ok) throw new HttpError(`ElevenLabs ${res.status}: ${(await res.text()).slice(0, 400)}`, 502);
   return res;

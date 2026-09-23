@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { ResearchRequest, ResearchResult } from '../shared/dataset.ts';
-import { Home } from './components/Home.tsx';
+import { Home, type ResearchVia } from './components/Home.tsx';
 import { ResearchView } from './components/ResearchView.tsx';
 import { Studio } from './components/Studio.tsx';
 import { newProject, type Project } from './lib/project.ts';
 import { loadProject, saveProject } from './lib/store.ts';
 
-type View = { name: 'home' } | { name: 'research'; request: ResearchRequest } | { name: 'studio'; project: Project };
+type View =
+  | { name: 'home' }
+  | { name: 'research'; request: ResearchRequest; via: ResearchVia }
+  | { name: 'studio'; project: Project };
 
 const projectFromHash = () => /^#p=([\w-]+)$/.exec(location.hash)?.[1] ?? null;
 
@@ -32,6 +35,7 @@ export function App() {
     return (
       <ResearchView
         request={view.request}
+        via={view.via}
         onDone={(result: ResearchResult) =>
           void open(newProject(view.request.topic, result.dataset, result.meta, view.request.bars))
         }
@@ -44,7 +48,7 @@ export function App() {
   }
   return (
     <Home
-      onStart={(request) => setView({ name: 'research', request })}
+      onStart={(request, via) => setView({ name: 'research', request, via })}
       onOpen={async (id) => {
         const p = await loadProject(id);
         if (p) setView({ name: 'studio', project: p });

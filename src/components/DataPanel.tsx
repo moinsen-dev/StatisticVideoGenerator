@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { parseDataset, type Dataset, type StoryEvent } from '../../shared/dataset.ts';
 import { makeValueFormatter } from '../engine/format.ts';
+import { useT } from '../lib/i18n.ts';
 
 const hex6 = (c: string) => (/^#[0-9a-f]{3}$/i.test(c) ? `#${[...c.slice(1)].map((x) => x + x).join('')}` : c);
 
 export function DataPanel({ dataset: ds, setDataset }: { dataset: Dataset; setDataset: (fn: (d: Dataset) => Dataset) => void }) {
+  const t = useT();
   const [json, setJson] = useState<string | null>(null);
   const [jsonError, setJsonError] = useState<string | null>(null);
   const fmt = useMemo(() => makeValueFormatter(ds), [ds]);
@@ -17,22 +19,22 @@ export function DataPanel({ dataset: ds, setDataset }: { dataset: Dataset; setDa
   const addEvent = () =>
     setDataset((d) => ({
       ...d,
-      events: [...d.events, { t: d.timeline[d.timeline.length - 1], icon: '💡', title: 'Neues Ereignis', text: '' }],
+      events: [...d.events, { t: d.timeline[d.timeline.length - 1], icon: '💡', title: t('newEvent'), text: '' }],
     }));
 
   return (
     <div className="stack">
       <label className="field">
-        <span className="label">Titel</span>
+        <span className="label">{t('title')}</span>
         <input value={ds.title} onChange={(e) => setDataset((d) => ({ ...d, title: e.target.value }))} />
       </label>
       <label className="field">
-        <span className="label">Untertitel</span>
+        <span className="label">{t('subtitle')}</span>
         <input value={ds.subtitle} onChange={(e) => setDataset((d) => ({ ...d, subtitle: e.target.value }))} />
       </label>
 
       <h3>
-        Reihen <span className="count">{ds.series.length}</span>
+        {t('series')} <span className="count">{ds.series.length}</span>
       </h3>
       <ul className="series-list">
         {ds.series.map((s, i) => {
@@ -43,15 +45,15 @@ export function DataPanel({ dataset: ds, setDataset }: { dataset: Dataset; setDa
                 type="color"
                 value={hex6(s.color)}
                 onChange={(e) => setSeries(i, { color: e.target.value })}
-                aria-label={`Farbe ${s.name}`}
+                aria-label={t('colorOf', { name: s.name })}
               />
               <input
                 className="emoji-input"
                 value={s.icon}
                 onChange={(e) => setSeries(i, { icon: e.target.value })}
-                aria-label={`Symbol ${s.name}`}
+                aria-label={t('iconOf', { name: s.name })}
               />
-              <input value={s.name} onChange={(e) => setSeries(i, { name: e.target.value })} aria-label="Name" />
+              <input value={s.name} onChange={(e) => setSeries(i, { name: e.target.value })} aria-label={t('name')} />
               <span className="peak">{fmt(peak)}</span>
             </li>
           );
@@ -59,7 +61,7 @@ export function DataPanel({ dataset: ds, setDataset }: { dataset: Dataset; setDa
       </ul>
 
       <h3>
-        Ereignisse <span className="count">{ds.events.length}</span>
+        {t('events')} <span className="count">{ds.events.length}</span>
       </h3>
       <ul className="event-list">
         {ds.events.map((e, i) => (
@@ -74,23 +76,23 @@ export function DataPanel({ dataset: ds, setDataset }: { dataset: Dataset; setDa
                   const t = Number(ev.target.value);
                   if (Number.isFinite(t)) setEvent(i, { t });
                 }}
-                aria-label="Zeitpunkt (Jahr)"
+                aria-label={t('eventTime')}
               />
-              <input className="emoji-input" value={e.icon} onChange={(ev) => setEvent(i, { icon: ev.target.value })} aria-label="Symbol" />
-              <input value={e.title} onChange={(ev) => setEvent(i, { title: ev.target.value })} aria-label="Überschrift" />
-              <button type="button" className="icon-btn" onClick={() => removeEvent(i)} aria-label="Ereignis entfernen">
+              <input className="emoji-input" value={e.icon} onChange={(ev) => setEvent(i, { icon: ev.target.value })} aria-label={t('icon')} />
+              <input value={e.title} onChange={(ev) => setEvent(i, { title: ev.target.value })} aria-label={t('headline')} />
+              <button type="button" className="icon-btn" onClick={() => removeEvent(i)} aria-label={t('removeEvent')}>
                 ✕
               </button>
             </div>
-            <textarea rows={2} value={e.text} onChange={(ev) => setEvent(i, { text: ev.target.value })} aria-label="Text" />
+            <textarea rows={2} value={e.text} onChange={(ev) => setEvent(i, { text: ev.target.value })} aria-label={t('text')} />
           </li>
         ))}
       </ul>
       <button type="button" className="ghost" onClick={addEvent}>
-        + Ereignis
+        {t('addEvent')}
       </button>
 
-      <h3>Quellen</h3>
+      <h3>{t('sources')}</h3>
       <ul className="sources">
         {ds.sources.map((s, i) => (
           <li key={i}>
@@ -111,7 +113,7 @@ export function DataPanel({ dataset: ds, setDataset }: { dataset: Dataset; setDa
           }
         }}
       >
-        <summary>JSON bearbeiten (alle Werte)</summary>
+        <summary>{t('editJson')}</summary>
         <textarea
           className="json"
           rows={18}
@@ -132,7 +134,7 @@ export function DataPanel({ dataset: ds, setDataset }: { dataset: Dataset; setDa
             }
           }}
         >
-          Übernehmen
+          {t('apply')}
         </button>
         {jsonError && <p className="error">{jsonError}</p>}
       </details>

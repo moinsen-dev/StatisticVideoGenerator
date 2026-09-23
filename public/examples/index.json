@@ -1,0 +1,50 @@
+[
+  {
+    "file": "companies-en.json",
+    "title": "The World's Most Valuable Companies",
+    "subtitle": "Market capitalization of top companies, year-end, 2000–2025",
+    "language": "en",
+    "bars": 10,
+    "icons": [
+      "🎮",
+      "🍎",
+      "🪟"
+    ]
+  },
+  {
+    "file": "smartphones-de.json",
+    "title": "Das große Smartphone-Wettrennen",
+    "subtitle": "Geschätzte Smartphone-Nutzer nach Land, 2000–2026",
+    "language": "de",
+    "bars": 10,
+    "icons": [
+      "🇨🇳",
+      "🇮🇳",
+      "🇺🇸"
+    ]
+  },
+  {
+    "file": "co2-en.json",
+    "title": "CO₂ Emissions Race: 1960–2024",
+    "subtitle": "Annual territorial CO2 emissions by country (fossil + industry), 1960–2024",
+    "language": "en",
+    "bars": 10,
+    "icons": [
+      "🇨🇳",
+      "🇺🇸",
+      "🇮🇳"
+    ]
+  },
+  {
+    "file": "population-de.json",
+    "title": "Bevölkerungsriesen im Wettrennen",
+    "subtitle": "Einwohnerzahl der größten Länder, 1960–2025 (Weltbank/UN-Daten)",
+    "language": "de",
+    "bars": 10,
+    "icons": [
+      "🇮🇳",
+      "🇨🇳",
+      "🇺🇸"
+    ]
+  }
+]

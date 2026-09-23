@@ -11,7 +11,7 @@ import {
   type ResearchResult,
   type ServerStatus,
 } from '../shared/dataset.ts';
-import { systemPrompt, userPrompt } from './prompt.ts';
+import { systemPrompt, userPrompt } from '../shared/prompt.ts';
 
 // Research runs through the locally installed, signed-in Claude Code CLI (the user's own
 // subscription): `claude -p` with only WebSearch/WebFetch enabled, structured output via
@@ -79,7 +79,12 @@ export async function runResearch(
   const model =
     req.depth === 'thorough' ? (process.env.RESEARCH_MODEL_THOROUGH ?? 'opus') : (process.env.RESEARCH_MODEL_FAST ?? 'sonnet');
   const started = Date.now();
-  const emit = (kind: ResearchProgress['kind'], text: string) => opts.onProgress({ kind, text, at: Date.now() - started });
+  const emit = (
+    kind: ResearchProgress['kind'],
+    text: string,
+    code?: ResearchProgress['code'],
+    vars?: ResearchProgress['vars'],
+  ) => opts.onProgress({ kind, text, at: Date.now() - started, ...(code ? { code, vars } : {}) });
 
   // Empty working directory: no project files, no CLAUDE.md, nothing to read but the web.
   const cwd = await mkdtemp(join(tmpdir(), 'statrace-research-'));
@@ -98,7 +103,7 @@ export async function runResearch(
     '--no-session-persistence',
   ];
 
-  emit('status', `Claude (${model}) startet die Recherche …`);
+  emit('status', `Claude (${model}) startet die Recherche …`, 'start', { model });
   const child = spawn(CLAUDE_BIN, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
   const kill = () => child.kill('SIGTERM');
   opts.signal.addEventListener('abort', kill, { once: true });
@@ -130,7 +135,8 @@ export async function runResearch(
     if (now - lastLive < 1200) return;
     lastLive = now;
     const n = (v: number) => v.toLocaleString('de-DE');
-    emit('live', block === 'StructuredOutput' ? `Schreibt den Datensatz … ${n(written)} Zeichen` : `Denkt nach … ${n(thought)} Zeichen`);
+    if (block === 'StructuredOutput') emit('live', `Schreibt den Datensatz … ${n(written)} Zeichen`, 'writing', { n: n(written) });
+    else emit('live', 'Denkt nach …', 'thinking');
   };
 
   try {
@@ -163,7 +169,7 @@ export async function runResearch(
             fetches++;
             emit('fetch', clip(String(block.input?.url ?? '')));
           } else if (block.type === 'tool_use' && block.name === 'StructuredOutput') {
-            emit('status', 'Datensatz wird zusammengesetzt …');
+            emit('status', 'Datensatz wird zusammengesetzt …', 'assembling');
           } else if (block.type === 'text' && block.text?.trim()) {
             emit('note', clip(block.text));
           }
@@ -178,10 +184,11 @@ export async function runResearch(
       throw new Error(`Claude meldet einen Fehler: ${clip(final.result ?? final.subtype ?? 'unbekannt', 400)}`);
     }
     const dataset = parseDataset(final.structured_output ?? JSON.parse(final.result ?? 'null'));
-    emit(
-      'status',
-      `Fertig: ${dataset.series.length} Reihen · ${dataset.timeline.length} Zeitpunkte · ${dataset.events.length} Ereignisse`,
-    );
+    emit('status', 'Fertig', 'done', {
+      series: dataset.series.length,
+      points: dataset.timeline.length,
+      events: dataset.events.length,
+    });
     return {
       dataset,
       meta: { model: resolvedModel, durationMs: Date.now() - started, searches, fetches, costUsd: final.total_cost_usd ?? null },

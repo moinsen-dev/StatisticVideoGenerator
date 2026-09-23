@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "@fontsource-variable/inter": "^5.3.0",
     "@hono/node-server": "^2.1.1",
     "hono": "^4.13.8",
@@ -27,5 +28,15 @@
     "concurrently": "^10.0.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.0"
+  },
+  "description": "Turn any topic into an AI-researched bar chart race video with fun facts and a soundtrack, rendered to MP4 in the browser.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/moinsen-dev/StatisticVideoGenerator.git"
+  },
+  "homepage": "https://statrace.moinsen.dev",
+  "engines": {
+    "node": ">=24"
   }
 }

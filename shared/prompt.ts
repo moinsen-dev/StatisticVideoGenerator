@@ -1,6 +1,9 @@
-import type { ResearchRequest } from '../shared/dataset.ts';
+import type { ResearchRequest } from './dataset.ts';
 
-export function systemPrompt(req: ResearchRequest): string {
+// One research brief for both paths: the local `claude` CLI (structured output via --json-schema)
+// and the browser with the user's own API key (dataset delivered through the submit_dataset tool).
+
+export function systemPrompt(req: ResearchRequest, delivery: 'schema' | 'tool' = 'schema'): string {
   const today = new Date().toISOString().slice(0, 10);
   const language = req.language === 'de' ? 'German' : 'English';
   const minSeries = req.bars + 4;
@@ -16,7 +19,8 @@ Your job: turn the user's topic into a complete, accurate, video-ready dataset. 
 - Include ${minSeries} to ${maxSeries} entities so that there is movement in and out of the visible top ${req.bars}.
 
 ## 2. Research
-- Use web search and page fetches efficiently: about 5-10 searches and at most 6 fetches. Prefer authoritative sources: Our World in Data, World Bank, UN, ITU, OECD, IEA, national statistics offices, company reports, well-sourced Wikipedia tables.
+- Use web search and page fetches efficiently: about 5-10 searches and at most 6 fetches.
+- Prefer openly licensed sources that allow reuse with attribution, so the video can be published: Our World in Data (CC BY), World Bank (CC BY 4.0), UN, OECD, IEA, national statistics offices, company reports, well-sourced Wikipedia tables. Use paywalled or restrictively licensed sources (e.g. Statista) only as a last resort, and say so in \`notes\`.
 - Never invent precise numbers. Where yearly values are missing, interpolate or estimate sensibly from what you found, and say so in \`notes\`.
 
 ## 3. Values
@@ -28,7 +32,7 @@ Your job: turn the user's topic into a complete, accurate, video-ready dataset. 
 - All visible text (title, subtitle, series names, unitLabel, total label, events, notes) is in ${language}.
 - \`title\` max 48 characters and catchy; \`subtitle\` says exactly what is measured and the range, max 70 characters.
 - Series \`name\` max 18 characters. \`icon\`: one emoji, the flag emoji for countries. \`color\`: a vivid hex color matching the entity (flag or brand color); the leading entities must be clearly distinguishable from each other.
-- \`compact\`: true when values reach millions. \`valuePrefix\` / \`valueSuffix\` for units such as "$", " t" or "%". \`decimals\` 0-2 for values below one million.
+- \`compact\`: true when values reach millions. \`valuePrefix\` / \`valueSuffix\` carry the unit: "$" as prefix for money; physical units always as suffix with a leading space (" t" for tonnes, " TWh", " km"), "%" for shares. \`decimals\` 0-2 for values below one million.
 
 ## 5. Events (the fun-fact cards)
 - 10 to 16 events spread across the whole timeline, relevant to the topic and to the competing entities: milestones, launches, crises, records, surprising facts.
@@ -44,7 +48,14 @@ Compose a matching instrumental soundtrack in \`music\`:
 - \`prompt\`: an English prompt for an AI music generator describing the same track (instrumental only, genre, mood, instruments, tempo, energy arc). No artist names.
 
 ## 7. Sources
-List the sources you actually used (title and URL). Put definitions, caveats and estimates into \`notes\`.`;
+List the sources you actually used (title and URL). Put definitions, caveats and estimates into \`notes\`.${
+    delivery === 'tool'
+      ? `
+
+## 8. Delivery
+When your research is complete, call the \`submit_dataset\` tool exactly once with the complete dataset. Do not write the dataset as text.`
+      : ''
+  }`;
 }
 
 export function userPrompt(req: ResearchRequest): string {
