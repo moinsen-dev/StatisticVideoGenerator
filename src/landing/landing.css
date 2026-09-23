@@ -315,6 +315,10 @@ html {
   font-weight: 600;
 }
 
+.l-cards.l-providers {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 /* ---------------------------------------------------------------- moinsen */
 
 .l-moinsen {
@@ -455,7 +459,8 @@ html {
     grid-template-columns: 1fr 1fr;
   }
 
-  .l-cards {
+  .l-cards,
+  .l-cards.l-providers {
     grid-template-columns: 1fr;
   }
 }

@@ -1,9 +1,22 @@
 import type { ResearchRequest } from './dataset.ts';
 
-// One research brief for both paths: the local `claude` CLI (structured output via --json-schema)
-// and the browser with the user's own API key (dataset delivered through the submit_dataset tool).
+// One research brief for every path: the local CLIs (structured output via a JSON schema), the
+// browser with the user's own API key, and local models that research open data through tools.
 
-export function systemPrompt(req: ResearchRequest, delivery: 'schema' | 'tool' = 'schema'): string {
+const WEB_RESEARCH = `- Use web search and page fetches efficiently: about 5-10 searches and at most 6 fetches.
+- Prefer openly licensed sources that allow reuse with attribution, so the video can be published: Our World in Data (CC BY), World Bank (CC BY 4.0), UN, OECD, IEA, national statistics offices, company reports, well-sourced Wikipedia tables. Use paywalled or restrictively licensed sources (e.g. Statista) only as a last resort, and say so in \`notes\`.
+- Never invent precise numbers. Where yearly values are missing, interpolate or estimate sensibly from what you found, and say so in \`notes\`.`;
+
+const OPEN_DATA_RESEARCH = `- You have no web search. Research with the tools instead: \`search\` finds Our World in Data charts and Wikipedia articles, \`owid_chart\` reads a chart (unit, source, the leading countries; the dataset can reference its exact yearly values), \`wikipedia_tables\` returns the tables of a Wikipedia article.
+- Search once, then read the best source. One owid_chart or wikipedia_tables call is usually enough: stop researching as soon as you have yearly values for the competitors. Our World in Data fits country statistics; Wikipedia lists fit companies, brands, products, cities and people.
+- Take the numbers from the tool results. Where yearly values are missing, interpolate or estimate from what you found, and say so in \`notes\`. Only if the tools return nothing usable, fall back on your own knowledge and say so clearly in \`notes\`.
+- List the pages you actually used as sources.`;
+
+export function systemPrompt(
+  req: ResearchRequest,
+  delivery: 'schema' | 'tool' = 'schema',
+  research: 'web' | 'open-data' = 'web',
+): string {
   const today = new Date().toISOString().slice(0, 10);
   const language = req.language === 'de' ? 'German' : 'English';
   const minSeries = req.bars + 4;
@@ -19,9 +32,7 @@ Your job: turn the user's topic into a complete, accurate, video-ready dataset. 
 - Include ${minSeries} to ${maxSeries} entities so that there is movement in and out of the visible top ${req.bars}.
 
 ## 2. Research
-- Use web search and page fetches efficiently: about 5-10 searches and at most 6 fetches.
-- Prefer openly licensed sources that allow reuse with attribution, so the video can be published: Our World in Data (CC BY), World Bank (CC BY 4.0), UN, OECD, IEA, national statistics offices, company reports, well-sourced Wikipedia tables. Use paywalled or restrictively licensed sources (e.g. Statista) only as a last resort, and say so in \`notes\`.
-- Never invent precise numbers. Where yearly values are missing, interpolate or estimate sensibly from what you found, and say so in \`notes\`.
+${research === 'web' ? WEB_RESEARCH : OPEN_DATA_RESEARCH}
 
 ## 3. Values
 - \`timeline\`: ascending integer years, one entry per year, from start to end.

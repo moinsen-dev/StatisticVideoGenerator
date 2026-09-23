@@ -26,6 +26,7 @@ const WHY: [string, MessageKey, MessageKey][] = [
 const FACTS: MessageKey[] = ['lFact1', 'lFact2', 'lFact3', 'lFact4'];
 const FAQ: [MessageKey, MessageKey][] = [
   ['lFaq1Q', 'lFaq1A'],
+  ['lFaq7Q', 'lFaq7A'],
   ['lFaq2Q', 'lFaq2A'],
   ['lFaq3Q', 'lFaq3A'],
   ['lFaq4Q', 'lFaq4A'],
@@ -179,6 +180,13 @@ export function Landing() {
                 </li>
               );
             })}
+            <li>
+              <h3>
+                {t('localModel')} <span className="muted">· {PROVIDERS.local.vendor}</span>
+              </h3>
+              <p>{t('lLocalCard')}</p>
+              <p className="l-cost">{t('lFree')}</p>
+            </li>
           </ul>
           <p className="hint">{t('lAiLocal')}</p>
           <div className="l-ctas">

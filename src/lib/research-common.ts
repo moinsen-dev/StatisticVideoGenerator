@@ -1,30 +1,7 @@
 import type { ResearchProgress } from '../../shared/dataset.ts';
 import { getLang, translate, type MessageKey } from './i18n.ts';
 
-// Helpers shared by the browser research adapters (Anthropic, OpenAI).
-
-type Schema = Record<string, unknown>;
-
-/** Strict schemas want anyOf instead of type arrays, and closed objects everywhere. */
-export function toStrict(node: unknown): unknown {
-  if (Array.isArray(node)) return node.map(toStrict);
-  if (!node || typeof node !== 'object') return node;
-  const src = node as Schema;
-  const out: Schema = {};
-  for (const [k, v] of Object.entries(src)) out[k] = toStrict(v);
-  if (Array.isArray(src.type)) {
-    const { type, description, ...rest } = out;
-    return {
-      ...(description ? { description } : {}),
-      anyOf: (type as string[]).map((t) => (t === 'null' ? { type: 'null' } : { ...rest, type: t })),
-    };
-  }
-  if (out.type === 'object' && out.properties) {
-    out.additionalProperties = false;
-    out.required = Object.keys(out.properties as Schema);
-  }
-  return out;
-}
+// Helpers shared by the browser research adapters (Anthropic, OpenAI, local models).
 
 export const clip = (s: string, n = 180) => {
   const flat = s.replace(/\s+/g, ' ').trim();

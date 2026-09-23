@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ResearchProgress, ResearchRequest, ResearchResult } from '../../shared/dataset.ts';
 import { useT, type MessageKey, type Translate } from '../lib/i18n.ts';
-import { PROVIDERS, runResearch, type ProviderId } from '../lib/providers.ts';
+import { providerName, runResearch, type ProviderId } from '../lib/providers.ts';
 
 const ICON: Record<ResearchProgress['kind'], string> = { search: '🔎', fetch: '📄', note: '💬', status: '⚙️', live: '✍️' };
 const CODE_KEY: Record<NonNullable<ResearchProgress['code']>, MessageKey> = {
@@ -61,7 +61,7 @@ export function ResearchView(props: {
   return (
     <div className="research">
       <div className="research-card">
-        <p className="eyebrow">{error ? t('researchFailed') : t('researching', { name: PROVIDERS[props.provider].name })}</p>
+        <p className="eyebrow">{error ? t('researchFailed') : t('researching', { name: providerName(props.provider) })}</p>
         <h1>{props.request.topic}</h1>
         {!error && (
           <div className="research-meter" aria-hidden>
@@ -72,7 +72,7 @@ export function ResearchView(props: {
         )}
         <p className="research-stats">
           {t('researchStats', { time: mmss(elapsed), searches, fetches })}
-          {!error && t('researchUsual')}
+          {!error && t(props.provider === 'local' ? 'researchUsualLocal' : 'researchUsual')}
         </p>
         {live && !error && <p className="research-live">✍️ {label(live, t)}</p>}
         <ol className="feed">

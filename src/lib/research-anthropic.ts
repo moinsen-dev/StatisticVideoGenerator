@@ -1,13 +1,13 @@
 import type AnthropicSDK from '@anthropic-ai/sdk';
 import {
-  datasetJsonSchema,
   parseDataset,
+  strictDatasetJsonSchema,
   type ResearchProgress,
   type ResearchRequest,
   type ResearchResult,
 } from '../../shared/dataset.ts';
 import { systemPrompt, userPrompt } from '../../shared/prompt.ts';
-import { clip, explainApiError, message, progressEmitter, toStrict, writingMeter } from './research-common.ts';
+import { clip, explainApiError, message, progressEmitter, writingMeter } from './research-common.ts';
 
 // Research with the visitor's own Anthropic API key, straight from the browser (BYOK).
 // The key goes to api.anthropic.com only; this app has no server in this mode.
@@ -39,7 +39,7 @@ export async function researchWithAnthropic(
     {
       name: 'submit_dataset',
       description: 'Deliver the finished dataset. Call exactly once, at the very end, with the complete dataset.',
-      input_schema: toStrict(datasetJsonSchema()) as AnthropicSDK.Tool.InputSchema,
+      input_schema: strictDatasetJsonSchema() as AnthropicSDK.Tool.InputSchema,
       strict: true,
       eager_input_streaming: true,
     },

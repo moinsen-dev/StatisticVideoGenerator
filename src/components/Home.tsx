@@ -5,10 +5,12 @@ import { exampleProject, listExamples, type Example } from '../lib/examples.ts';
 import { useLang, useT } from '../lib/i18n.ts';
 import { REPO_URL } from '../lib/links.ts';
 import { newProject, type Project } from '../lib/project.ts';
-import { BYOK_PROVIDERS, defaultProvider, hasKey, PROVIDERS, saveProvider, type ProviderId } from '../lib/providers.ts';
+import { getLocalConfig } from '../lib/local-model.ts';
+import { availableProviders, defaultProvider, isReady, modelLabel, PROVIDERS, saveProvider, type ProviderId } from '../lib/providers.ts';
 import { deleteProject, listProjects, type ProjectMeta } from '../lib/store.ts';
 import { Brand } from './Brand.tsx';
 import { LangSwitch } from './LangSwitch.tsx';
+import { LocalModelSetup } from './LocalModelSetup.tsx';
 import { ProviderKeyField, providerTitle } from './Settings.tsx';
 
 const TOPICS = {
@@ -43,10 +45,10 @@ export function Home(props: {
   const [bars, setBars] = useState(10);
   const [depth, setDepth] = useState<'fast' | 'thorough'>('fast');
   const [status, setStatus] = useState<ServerStatus | null | undefined>(undefined);
-  const [provider, setProvider] = useState<ProviderId>(() => defaultProvider(false));
-  // The key field stays open while someone types, even once the key looks complete.
-  const [keyOpen, setKeyOpen] = useState(false);
-  const [, setKeyVersion] = useState(0);
+  const [provider, setProvider] = useState<ProviderId>(() => defaultProvider(null));
+  // Key field or local setup stays open while someone edits it, even once it looks complete.
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [, setVersion] = useState(0);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [examples, setExamples] = useState<Example[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
@@ -54,25 +56,25 @@ export function Home(props: {
 
   useEffect(() => {
     void getStatus().then((s) => {
-      const id = defaultProvider(Boolean(s?.claude.available && s.claude.loggedIn));
+      const id = defaultProvider(s);
       setStatus(s);
       setProvider(id);
-      setKeyOpen(!hasKey(id));
+      setSetupOpen(!isReady(id, s));
     });
     void listProjects().then(setProjects);
     void listExamples().then(setExamples);
   }, []);
 
   const cliReady = Boolean(status?.claude.available && status.claude.loggedIn);
-  const ids: ProviderId[] = cliReady ? ['claude-code', ...BYOK_PROVIDERS] : BYOK_PROVIDERS;
+  const codexReady = Boolean(status?.codex.available && status.codex.loggedIn);
+  const ids = availableProviders(status);
   const p = PROVIDERS[provider];
-  const ready = provider === 'claude-code' ? cliReady : hasKey(provider);
-  const canStart = topic.trim().length >= 3 && ready;
+  const canStart = topic.trim().length >= 3 && isReady(provider, status);
 
   const choose = (id: ProviderId) => {
     setProvider(id);
     saveProvider(id);
-    setKeyOpen(!hasKey(id));
+    setSetupOpen(!isReady(id, status));
   };
 
   const importFile = async (file: File) => {
@@ -129,28 +131,27 @@ export function Home(props: {
 
           {status !== undefined && (
             <div className="via">
-              <span className="label">{t('via')}</span>
-              <div className="seg" role="radiogroup" aria-label={t('via')}>
-                {ids.map((id) => (
-                  <button
-                    type="button"
-                    key={id}
-                    role="radio"
-                    aria-checked={provider === id}
-                    className={provider === id ? 'on' : ''}
-                    onClick={() => choose(id)}
-                  >
-                    {providerTitle(id, t)}
-                  </button>
-                ))}
-              </div>
-              {p.key &&
-                (keyOpen ? (
-                  <ProviderKeyField id={provider} onChange={() => setKeyVersion((v) => v + 1)} />
+              <label className="field">
+                <span className="label">{t('via')}</span>
+                <select value={provider} onChange={(e) => choose(e.target.value as ProviderId)}>
+                  {ids.map((id) => (
+                    <option key={id} value={id}>
+                      {providerTitle(id, t)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {(p.key || provider === 'local') &&
+                (setupOpen ? (
+                  provider === 'local' ? (
+                    <LocalModelSetup onChange={() => setVersion((v) => v + 1)} />
+                  ) : (
+                    <ProviderKeyField id={provider} onChange={() => setVersion((v) => v + 1)} />
+                  )
                 ) : (
                   <p className="hint key-ok">
-                    ✓ {t('keySaved')} ·{' '}
-                    <button type="button" className="link" onClick={() => setKeyOpen(true)}>
+                    ✓ {provider === 'local' ? getLocalConfig().model : t('keySaved')} ·{' '}
+                    <button type="button" className="link" onClick={() => setSetupOpen(true)}>
                       {t('keyChange')}
                     </button>
                   </p>
@@ -179,8 +180,8 @@ export function Home(props: {
             <label>
               {t('depth')}
               <select value={depth} onChange={(e) => setDepth(e.target.value as 'fast' | 'thorough')}>
-                <option value="fast">{t('depthFast', { model: p.models.fast })}</option>
-                <option value="thorough">{t('depthThorough', { model: p.models.thorough })}</option>
+                <option value="fast">{t('depthFast', { model: modelLabel(provider, 'fast') })}</option>
+                <option value="thorough">{t('depthThorough', { model: modelLabel(provider, 'thorough') })}</option>
               </select>
             </label>
             <button className="primary" disabled={!canStart}>
@@ -196,6 +197,11 @@ export function Home(props: {
                 ? t('cliReady', { subscription: status.claude.subscription ?? '', version: status.claude.version ?? '' })
                 : t('cliMissing')}
             </span>
+            {codexReady && (
+              <span className="good">
+                {t('codexReady', { subscription: status.codex.subscription ?? '', version: status.codex.version ?? '' })}
+              </span>
+            )}
             {status.elevenlabs && <span className="good">{t('elevenReady')}</span>}
           </p>
         )}

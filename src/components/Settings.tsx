@@ -3,8 +3,9 @@ import type { ServerStatus } from '../../shared/dataset.ts';
 import { getStatus } from '../lib/api.ts';
 import { useLang, useT, type Lang, type MessageKey, type Translate } from '../lib/i18n.ts';
 import { forgetAllKeys } from '../lib/keys.ts';
+import { getLocalConfig } from '../lib/local-model.ts';
 import {
-  BYOK_PROVIDERS,
+  availableProviders,
   defaultProvider,
   hasKey,
   PROVIDERS,
@@ -16,15 +17,26 @@ import {
 import { Brand } from './Brand.tsx';
 import { KeyField } from './KeyField.tsx';
 import { LangSwitch } from './LangSwitch.tsx';
+import { LocalModelSetup } from './LocalModelSetup.tsx';
 
 const DESCRIPTION: Record<ProviderId, MessageKey> = {
   'claude-code': 'provClaudeCodeDesc',
+  codex: 'provCodexDesc',
+  local: 'provLocalDesc',
   anthropic: 'provAnthropicDesc',
   openai: 'provOpenaiDesc',
 };
 
-export const providerTitle = (id: ProviderId, t: Translate) =>
-  id === 'claude-code' ? t('claudeCodeLocal') : `${PROVIDERS[id].name} · ${PROVIDERS[id].vendor}`;
+const TITLE: Partial<Record<ProviderId, MessageKey>> = {
+  'claude-code': 'claudeCodeLocal',
+  codex: 'codexLocal',
+  local: 'localModel',
+};
+
+export const providerTitle = (id: ProviderId, t: Translate) => {
+  const key = TITLE[id];
+  return key ? t(key) : `${PROVIDERS[id].name} · ${PROVIDERS[id].vendor}`;
+};
 
 const costText = (p: Provider, lang: Lang) =>
   p.cost ? `${usdRange(p.cost.fast, lang)} (${p.models.thorough}: ${usdRange(p.cost.thorough, lang)})` : '';
@@ -52,20 +64,19 @@ export function Settings(props: { onBack: () => void }) {
   const t = useT();
   const lang = useLang();
   const [status, setStatus] = useState<ServerStatus | null | undefined>(undefined);
-  const [provider, setProvider] = useState<ProviderId>(() => defaultProvider(false));
-  const [, setKeyVersion] = useState(0);
+  const [provider, setProvider] = useState<ProviderId>(() => defaultProvider(null));
+  const [, setVersion] = useState(0);
   // Bumped by "remove all keys" so every key field starts empty again.
   const [generation, setGeneration] = useState(0);
-  const cliReady = Boolean(status?.claude.available && status.claude.loggedIn);
 
   useEffect(() => {
     void getStatus().then((s) => {
       setStatus(s);
-      setProvider(defaultProvider(Boolean(s?.claude.available && s.claude.loggedIn)));
+      setProvider(defaultProvider(s));
     });
   }, []);
 
-  const ids: ProviderId[] = cliReady ? ['claude-code', ...BYOK_PROVIDERS] : BYOK_PROVIDERS;
+  const ids = availableProviders(status);
   const choose = (id: ProviderId) => {
     setProvider(id);
     saveProvider(id);
@@ -99,14 +110,17 @@ export function Settings(props: { onBack: () => void }) {
                     <span>
                       <strong>{providerTitle(id, t)}</strong>
                       <small>
-                        {p.models.fast} · {p.models.thorough}
+                        {id === 'local'
+                          ? getLocalConfig().model || t('localNoModel')
+                          : `${p.models.fast} · ${p.models.thorough}`}
                         {p.cost && ` · ${t('perResearch', { cost: usdRange(p.cost.fast, lang) })}`}
                       </small>
                       <small>{t(DESCRIPTION[id])}</small>
                     </span>
                     {p.key && <em className={`badge ${hasKey(id) ? 'ok' : ''}`}>{hasKey(id) ? t('keySaved') : t('keyNone')}</em>}
                   </label>
-                  {on && <ProviderKeyField id={id} onChange={() => setKeyVersion((v) => v + 1)} />}
+                  {on && id === 'local' && <LocalModelSetup onChange={() => setVersion((v) => v + 1)} />}
+                  {on && <ProviderKeyField id={id} onChange={() => setVersion((v) => v + 1)} />}
                 </div>
               );
             })}

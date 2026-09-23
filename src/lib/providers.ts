@@ -1,16 +1,18 @@
-import type { ResearchProgress, ResearchRequest, ResearchResult } from '../../shared/dataset.ts';
+import type { ResearchProgress, ResearchRequest, ResearchResult, ServerStatus } from '../../shared/dataset.ts';
 import { research as researchWithCli } from './api.ts';
 import type { Lang } from './i18n.ts';
 import { getKey, type KeyName } from './keys.ts';
+import { getLocalConfig } from './local-model.ts';
 
-// Who researches a topic. Two kinds:
-// - claude-code: the unmodified `claude` CLI behind the local dev server, on the user's own
-//   subscription; for local use only.
+// Who researches a topic. Three kinds:
+// - claude-code, codex: the unmodified `claude` / `codex` CLI behind the local dev server, on the
+//   user's own subscription (Claude, ChatGPT); for local use only.
+// - local: a model on the visitor's machine (Ollama, LM Studio …), no key; it researches open data.
 // - anthropic, openai: hosted APIs, called straight from the browser with the visitor's own key.
 // Google Gemini is left out on purpose: the terms for Grounding with Google Search forbid modifying
 // or redistributing grounded results, and a published video is exactly that.
 
-export type ProviderId = 'claude-code' | 'anthropic' | 'openai';
+export type ProviderId = 'claude-code' | 'codex' | 'local' | 'anthropic' | 'openai';
 type Depth = ResearchRequest['depth'];
 
 export type Provider = {
@@ -30,6 +32,23 @@ export const PROVIDERS: Record<ProviderId, Provider> = {
     name: 'Claude',
     vendor: 'Claude Code',
     models: { fast: 'Sonnet', thorough: 'Opus' },
+    cost: null,
+    key: null,
+  },
+  codex: {
+    id: 'codex',
+    name: 'GPT',
+    vendor: 'Codex',
+    models: { fast: 'GPT-6 Sol', thorough: 'GPT-6 Astra' },
+    cost: null,
+    key: null,
+  },
+  // name and models come from the local configuration, see providerName/modelLabel
+  local: {
+    id: 'local',
+    name: '',
+    vendor: 'Ollama · LM Studio',
+    models: { fast: '', thorough: '' },
     cost: null,
     key: null,
   },
@@ -70,6 +89,23 @@ export const usdRange = ([lo, hi]: [number, number], lang: Lang) =>
 /** Providers that work everywhere, including the hosted site. */
 export const BYOK_PROVIDERS: ProviderId[] = ['anthropic', 'openai'];
 
+const cliReady = (cli: ServerStatus['claude'] | undefined) => Boolean(cli?.available && cli.loggedIn);
+
+/** What can research here: signed-in CLIs of the local server, a local model, and the key-based APIs. */
+export function availableProviders(status: ServerStatus | null | undefined): ProviderId[] {
+  return [
+    ...(cliReady(status?.claude) ? (['claude-code'] as const) : []),
+    ...(cliReady(status?.codex) ? (['codex'] as const) : []),
+    'local',
+    ...BYOK_PROVIDERS,
+  ];
+}
+
+/** The AI's name in progress texts; for a local model, its model id. */
+export const providerName = (id: ProviderId) => (id === 'local' ? getLocalConfig().model || 'Local model' : PROVIDERS[id].name);
+
+export const modelLabel = (id: ProviderId, depth: Depth) => (id === 'local' ? getLocalConfig().model : PROVIDERS[id].models[depth]);
+
 const STORE = 'statrace:provider';
 
 export function saveProvider(id: ProviderId): void {
@@ -80,21 +116,31 @@ export function saveProvider(id: ProviderId): void {
   }
 }
 
-/** The saved choice if it can run here; otherwise the local CLI when it is signed in, else Claude by key. */
-export function defaultProvider(cliReady: boolean): ProviderId {
+/** The saved choice if it can run here; otherwise a signed-in local CLI, else Claude by key. */
+export function defaultProvider(status: ServerStatus | null | undefined): ProviderId {
+  const available = availableProviders(status);
   let saved: string | null = null;
   try {
     saved = localStorage.getItem(STORE);
   } catch {
     // storage unavailable
   }
-  if (saved === 'anthropic' || saved === 'openai' || (saved === 'claude-code' && cliReady)) return saved;
-  return cliReady ? 'claude-code' : 'anthropic';
+  const pick = available.find((id) => id === saved);
+  if (pick) return pick;
+  return available[0] === 'claude-code' || available[0] === 'codex' ? available[0] : 'anthropic';
 }
 
 export function hasKey(id: ProviderId): boolean {
   const key = PROVIDERS[id].key;
   return !key || getKey(key.name).startsWith(key.prefix);
+}
+
+/** Everything the provider needs is in place: a signed-in CLI, a chosen local model or a key. */
+export function isReady(id: ProviderId, status: ServerStatus | null | undefined): boolean {
+  if (id === 'claude-code') return cliReady(status?.claude);
+  if (id === 'codex') return cliReady(status?.codex);
+  if (id === 'local') return Boolean(getLocalConfig().model);
+  return hasKey(id);
 }
 
 export async function runResearch(
@@ -103,9 +149,14 @@ export async function runResearch(
   onProgress: (p: ResearchProgress) => void,
   signal: AbortSignal,
 ): Promise<ResearchResult> {
-  if (id === 'claude-code') return researchWithCli(req, onProgress, signal);
-  const key = getKey(PROVIDERS[id].key!.name);
+  if (id === 'claude-code') return researchWithCli(req, 'claude', onProgress, signal);
+  if (id === 'codex') return researchWithCli(req, 'codex', onProgress, signal);
   // Loaded on demand: each adapter pulls in its provider's SDK.
+  if (id === 'local') {
+    const { researchWithLocalModel } = await import('./research-local.ts');
+    return researchWithLocalModel(req, getLocalConfig(), onProgress, signal);
+  }
+  const key = getKey(PROVIDERS[id].key!.name);
   if (id === 'anthropic') {
     const { researchWithAnthropic } = await import('./research-anthropic.ts');
     return researchWithAnthropic(req, key, onProgress, signal);

@@ -61,8 +61,11 @@ const DE = {
   start: 'Recherchieren & Video bauen',
   via: 'Recherche mit',
   claudeCodeLocal: 'Claude Code · lokal',
+  codexLocal: 'Codex · lokal',
+  localModel: 'Lokales Modell',
   cliReady: 'Claude CLI angemeldet ({subscription}, {version})',
   cliMissing: 'Claude CLI nicht angemeldet: im Terminal `claude` starten und einloggen',
+  codexReady: 'Codex CLI angemeldet ({subscription}, {version})',
   keyLabel: '{vendor}-API-Key',
   keyRemember: 'In diesem Browser merken',
   keyHint:
@@ -82,6 +85,7 @@ const DE = {
   researchFailed: 'Recherche fehlgeschlagen',
   researchStats: '{time} · {searches} Suchen · {fetches} Seiten gelesen',
   researchUsual: ' · meist 2–5 Minuten',
+  researchUsualLocal: ' · lokal meist 5–10 Minuten',
   cancel: 'Abbrechen',
   back: 'Zurück',
   retry: 'Nochmal versuchen',
@@ -179,6 +183,22 @@ const DE = {
   provClaudeCodeDesc:
     'Nutzt dein Claude-Abo über die lokale claude CLI. Kein API-Key nötig, nur für den eigenen Gebrauch auf deinem Rechner.',
   perResearch: 'Etwa {cost} pro Recherche',
+  provCodexDesc:
+    'Nutzt dein ChatGPT-Abo über die lokale codex CLI, mit Websuche. Kein API-Key nötig, nur für den eigenen Gebrauch auf deinem Rechner.',
+  provLocalDesc:
+    'Ollama, LM Studio oder ein anderer OpenAI-kompatibler Server auf deinem Rechner. Kostenlos und ohne Key; recherchiert wird in offenen Daten (Our World in Data, Wikipedia).',
+  localServer: 'Server-Adresse',
+  localConnect: 'Verbinden',
+  localModelLabel: 'Modell',
+  localChecking: 'Verbinde …',
+  localFound: '{n} Modelle gefunden. Brauchbare Daten liefern Modelle ab etwa 14 Mrd. Parametern; lokal dauert eine Recherche einige Minuten.',
+  localNone: 'Der Server läuft, hat aber noch kein Modell. Zum Beispiel im Terminal: ollama pull qwen3.8',
+  localBlocked:
+    'Der Server antwortet, erlaubt diese Seite aber nicht. Ollama: im Terminal launchctl setenv OLLAMA_ORIGINS "{origin}" ausführen und Ollama neu starten (Linux, Windows: Umgebungsvariable OLLAMA_ORIGINS setzen). LM Studio: in den Server-Einstellungen CORS einschalten.',
+  localOffline:
+    'Kein Server erreichbar. Starte Ollama oder den Server in LM Studio. Chrome fragt beim ersten Mal, ob diese Seite auf Apps auf deinem Gerät zugreifen darf: erlauben.',
+  localNoModel: 'Kein Modell gewählt',
+  localNoTools: 'Dieses Modell kann keine Werkzeuge nutzen: Die Werte kommen aus seinem eigenen Wissen.',
   keySaved: 'Key hinterlegt',
   keyNone: 'Noch kein Key',
   keyForget: 'Key entfernen',
@@ -205,6 +225,8 @@ const DE = {
   errRefusal: '{name} hat die Anfrage abgelehnt. Formuliere das Thema anders.',
   errTruncated: 'Der Datensatz wurde abgeschnitten (Token-Limit).',
   errNoDataset: '{name} hat keinen Datensatz geliefert.',
+  errLocalConnection: 'Keine Verbindung zum lokalen Server unter {url}. Läuft er, und erlaubt er diese Seite? Hinweise in den Einstellungen.',
+  errLocalModel: 'Das Modell {model} ist auf dem lokalen Server nicht installiert.',
 
   // landing page
   lNavHow: 'So geht’s',
@@ -216,7 +238,7 @@ const DE = {
     'Du tippst ein Thema. Eine KI recherchiert Zahlen, Ereignisse und Quellen im Web. StatRace macht daraus ein animiertes Rennen mit Fun-Fact-Karten und Soundtrack und rendert das MP4 direkt in deinem Browser.',
   lCtaStart: 'Eigenes Video erstellen',
   lCtaHow: 'So funktioniert’s',
-  lCtaNote: 'Kein Konto. Die Beispiele laufen ohne Key; für neue Themen brauchst du einen eigenen Claude- oder OpenAI-Key.',
+  lCtaNote: 'Kein Konto. Die Beispiele laufen ohne Key. Neue Themen recherchiert dein eigener Claude- oder OpenAI-Key oder kostenlos ein lokales Modell.',
   lDemoBadge: 'Live gerendert',
   lDemoCaption: 'Kein Video, sondern die StatRace-Engine, die gerade in deinem Browser rechnet.',
   lDemoOpen: 'Im Studio öffnen',
@@ -231,7 +253,7 @@ const DE = {
     'Alles, was über die Zeit gegeneinander antritt: CO₂ nach Ländern, die wertvollsten Konzerne, die größten YouTube-Kanäle.',
   lStep2Title: 'Die KI recherchiert',
   lStep2Text:
-    'Claude oder GPT sucht im Web nach Jahreswerten, datierten Ereignissen und Quellen. Offene Daten wie Our World in Data und die Weltbank kommen zuerst.',
+    'Claude, GPT oder ein Modell auf deinem Rechner sucht Jahreswerte, datierte Ereignisse und Quellen. Offene Daten wie Our World in Data und die Weltbank kommen zuerst.',
   lStep3Title: 'StatRace animiert',
   lStep3Text:
     'Balken gleiten und überholen im Funkenflug, die Spitze trägt die Krone, Fun-Fact-Karten erscheinen im richtigen Moment, und ein eigens komponierter Soundtrack folgt der Geschichte.',
@@ -255,10 +277,12 @@ const DE = {
   lExamplesTitle: 'Beispiele zum Sofort-Öffnen',
   lAiTitle: 'Bring deine eigene KI mit',
   lAiLead:
-    'StatRace selbst kostet nichts. Die Recherche läuft mit deinem eigenen API-Key, du zahlst direkt beim Anbieter, meist weniger als einen Dollar pro Video.',
+    'StatRace selbst kostet nichts. Recherchiere mit deinem eigenen API-Key, dann zahlst du direkt beim Anbieter, meist weniger als einen Dollar pro Video. Oder kostenlos mit einem Modell auf deinem Rechner.',
   lAiLocal:
-    'Lokal installiert? Dann recherchiert StatRace auch über dein Claude-Abo mit Claude Code, ganz ohne API-Key.',
-  lAiCta: 'Key hinterlegen',
+    'Lokal installiert? Dann recherchiert StatRace auch über dein Claude- oder ChatGPT-Abo mit Claude Code oder Codex, ganz ohne API-Key.',
+  lLocalCard: 'Zum Beispiel Qwen 3.8 · recherchiert in offenen Daten',
+  lFree: 'Kostenlos',
+  lAiCta: 'KI einrichten',
   lMoinsenEyebrow: 'Gebaut von moinsen',
   lMoinsenTitle: 'Ideen rein, laufende Software raus.',
   lMoinsenText:
@@ -270,7 +294,10 @@ const DE = {
   lFaqTitle: 'Häufige Fragen',
   lFaq1Q: 'Was kostet das?',
   lFaq1A:
-    'StatRace ist kostenlos und Open Source. Die Recherche rechnet dein KI-Anbieter über deinen Key ab, mit Claude Sonnet 5 oder GPT-6 Sol meist 0,30–0,60 $ pro Video. Beispiele, Bearbeiten und Export kosten nichts.',
+    'StatRace ist kostenlos und Open Source. Die Recherche rechnet dein KI-Anbieter über deinen Key ab, mit Claude Sonnet 5 oder GPT-6 Sol meist 0,30–0,60 $ pro Video. Ein lokales Modell kostet nichts, Beispiele, Bearbeiten und Export auch nicht.',
+  lFaq7Q: 'Geht das ganz ohne API-Key?',
+  lFaq7A:
+    'Ja, mit einem lokalen Modell über Ollama oder LM Studio, zum Beispiel Qwen 3.8. Es recherchiert in offenen Daten von Our World in Data und Wikipedia; Werte aus Our World in Data trägt die App exakt ein. Lokal installiert geht es auch über dein Claude- oder ChatGPT-Abo mit Claude Code oder Codex.',
   lFaq2Q: 'Stimmen die Zahlen?',
   lFaq2A:
     'Die KI arbeitet mit echten Quellen und listet sie auf, aber viele Jahreswerte sind Schätzungen oder interpoliert. Prüf sie im Daten-Tab und korrigiere, was nicht passt, bevor du veröffentlichst.',
@@ -307,8 +334,11 @@ const EN: Record<MessageKey, string> = {
   start: 'Research & build video',
   via: 'Research with',
   claudeCodeLocal: 'Claude Code · local',
+  codexLocal: 'Codex · local',
+  localModel: 'Local model',
   cliReady: 'Claude CLI signed in ({subscription}, {version})',
   cliMissing: 'Claude CLI not signed in: run `claude` in a terminal and log in',
+  codexReady: 'Codex CLI signed in ({subscription}, {version})',
   keyLabel: '{vendor} API key',
   keyRemember: 'Remember in this browser',
   keyHint:
@@ -328,6 +358,7 @@ const EN: Record<MessageKey, string> = {
   researchFailed: 'Research failed',
   researchStats: '{time} · {searches} searches · {fetches} pages read',
   researchUsual: ' · usually 2–5 minutes',
+  researchUsualLocal: ' · locally usually 5–10 minutes',
   cancel: 'Cancel',
   back: 'Back',
   retry: 'Try again',
@@ -424,6 +455,22 @@ const EN: Record<MessageKey, string> = {
   provClaudeCodeDesc:
     'Uses your Claude subscription through the local claude CLI. No API key needed; for your own use on your own machine.',
   perResearch: 'About {cost} per research run',
+  provCodexDesc:
+    'Uses your ChatGPT plan through the local codex CLI, with web search. No API key needed; for your own use on your own machine.',
+  provLocalDesc:
+    'Ollama, LM Studio or any other OpenAI-compatible server on your machine. Free and without a key; it researches open data (Our World in Data, Wikipedia).',
+  localServer: 'Server address',
+  localConnect: 'Connect',
+  localModelLabel: 'Model',
+  localChecking: 'Connecting …',
+  localFound: '{n} models found. Models from about 14B parameters give usable data; a local research run takes a few minutes.',
+  localNone: 'The server is running but has no model yet. For example in a terminal: ollama pull qwen3.8',
+  localBlocked:
+    'The server answers but does not allow this page. Ollama: run launchctl setenv OLLAMA_ORIGINS "{origin}" in a terminal and restart Ollama (Linux, Windows: set the OLLAMA_ORIGINS environment variable). LM Studio: turn on CORS in the server settings.',
+  localOffline:
+    'No server reachable. Start Ollama or the server in LM Studio. The first time, Chrome asks whether this page may access apps on your device: allow it.',
+  localNoModel: 'No model chosen',
+  localNoTools: 'This model cannot use tools: the values come from its own knowledge.',
   keySaved: 'Key added',
   keyNone: 'No key yet',
   keyForget: 'Remove key',
@@ -449,6 +496,8 @@ const EN: Record<MessageKey, string> = {
   errRefusal: '{name} declined this request. Try rephrasing the topic.',
   errTruncated: 'The dataset was cut off (token limit).',
   errNoDataset: '{name} did not deliver a dataset.',
+  errLocalConnection: 'No connection to the local server at {url}. Is it running, and does it allow this page? See the settings for help.',
+  errLocalModel: 'The model {model} is not installed on the local server.',
 
   lNavHow: 'How it works',
   lNavFaq: 'FAQ',
@@ -459,7 +508,7 @@ const EN: Record<MessageKey, string> = {
     'Type a topic. An AI researches the numbers, events and sources on the web. StatRace turns them into an animated race with fun-fact cards and a soundtrack, and renders the MP4 right in your browser.',
   lCtaStart: 'Create your video',
   lCtaHow: 'See how it works',
-  lCtaNote: 'No account. The examples play without a key; new topics use your own Claude or OpenAI key.',
+  lCtaNote: 'No account. The examples play without a key. New topics are researched with your own Claude or OpenAI key, or for free by a local model.',
   lDemoBadge: 'Rendered live',
   lDemoCaption: 'Not a video file: this is the StatRace engine rendering right now in your browser.',
   lDemoOpen: 'Open in the studio',
@@ -473,7 +522,7 @@ const EN: Record<MessageKey, string> = {
   lStep1Text: 'Anything that competes over time: CO₂ by country, the most valuable companies, the biggest YouTube channels.',
   lStep2Title: 'The AI researches',
   lStep2Text:
-    'Claude or GPT searches the web for yearly values, dated events and sources. Open data such as Our World in Data and the World Bank comes first.',
+    'Claude, GPT or a model on your own machine looks up yearly values, dated events and sources. Open data such as Our World in Data and the World Bank comes first.',
   lStep3Title: 'StatRace animates',
   lStep3Text:
     'Bars glide and overtake in a shower of sparks, the leader wears the crown, fun-fact cards pop up at the right moment, and a soundtrack composed for your topic follows the story.',
@@ -496,9 +545,11 @@ const EN: Record<MessageKey, string> = {
   lExamplesTitle: 'Examples you can open right now',
   lAiTitle: 'Bring your own AI',
   lAiLead:
-    'StatRace itself is free. Research runs on your own API key, so you pay the provider directly, usually less than a dollar per video.',
-  lAiLocal: 'Running it locally? Then StatRace can also research through your Claude subscription with Claude Code, no API key needed.',
-  lAiCta: 'Add your key',
+    'StatRace itself is free. Research with your own API key and pay the provider directly, usually less than a dollar per video. Or research for free with a model on your own machine.',
+  lAiLocal: 'Running it locally? Then StatRace can also research through your Claude or ChatGPT subscription with Claude Code or Codex, no API key needed.',
+  lLocalCard: 'For example Qwen 3.8 · researches open data',
+  lFree: 'Free',
+  lAiCta: 'Set up your AI',
   lMoinsenEyebrow: 'Built by moinsen',
   lMoinsenTitle: 'Ideas in, working software out.',
   lMoinsenText:
@@ -510,7 +561,10 @@ const EN: Record<MessageKey, string> = {
   lFaqTitle: 'Questions',
   lFaq1Q: 'What does it cost?',
   lFaq1A:
-    'StatRace is free and open source. Your AI provider bills the research on your key, usually $0.30–0.60 per video with Claude Sonnet 5 or GPT-6 Sol. Examples, editing and export cost nothing.',
+    'StatRace is free and open source. Your AI provider bills the research on your key, usually $0.30–0.60 per video with Claude Sonnet 5 or GPT-6 Sol. A local model costs nothing, and neither do examples, editing and export.',
+  lFaq7Q: 'Does it work without an API key?',
+  lFaq7A:
+    'Yes, with a local model through Ollama or LM Studio, for example Qwen 3.8. It researches open data from Our World in Data and Wikipedia; the app fills in Our World in Data values exactly. Installed locally, it also works through your Claude or ChatGPT subscription with Claude Code or Codex.',
   lFaq2Q: 'Are the numbers right?',
   lFaq2A:
     'The AI works from real sources and lists them, but many yearly values are estimates or interpolations. Check them in the Data tab and fix what’s off before you publish.',

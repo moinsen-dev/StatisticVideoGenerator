@@ -1150,8 +1150,23 @@ a.example {
   text-decoration: none;
 }
 
-.via > .label {
-  margin-bottom: -0.35rem;
+.via > .field select {
+  width: auto;
+  min-width: 16rem;
+  max-width: 100%;
+}
+
+.inline-field {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.inline-field input {
+  flex: 1;
+}
+
+.hint.warn {
+  color: #ffcf8a;
 }
 
 .settings-main {

@@ -1,6 +1,6 @@
 # StatRace – Arbeitsnotizen
 
-Web-App: Thema → KI-Recherche (Claude oder GPT) → Bar-Chart-Race-Video mit Fun-Facts und Soundtrack → MP4.
+Web-App: Thema → KI-Recherche (Claude, GPT oder lokales Modell) → Bar-Chart-Race-Video mit Fun-Facts und Soundtrack → MP4.
 Open Source (MIT), live auf https://statrace.moinsen.dev (statisch, BYOK): Landingpage unter `/`, Studio unter `/app`.
 Stand und nächste Schritte: `STATE.md`. Nutzersicht (Englisch): `README.md`, Beiträge: `CONTRIBUTING.md`.
 
@@ -17,7 +17,8 @@ Stand und nächste Schritte: `STATE.md`. Nutzersicht (Englisch): `README.md`, Be
 | Aufgabe | Datei |
 |---|---|
 | Datensatz-Felder ändern | `shared/dataset.ts` – Schema ist zugleich der `--json-schema`-Vertrag für Claude; `normalizeDataset` repariert Modell-Ausreißer |
-| Recherche-Verhalten, Prompt | `shared/prompt.ts` (alle Wege), `server/research.ts` (CLI), `src/lib/research-anthropic.ts` / `research-openai.ts` (Key im Browser) |
+| Recherche-Verhalten, Prompt | `shared/prompt.ts` (alle Wege; `research: 'web' \| 'open-data'`), `server/research.ts` (claude), `server/research-codex.ts` (codex), `src/lib/research-anthropic.ts` / `research-openai.ts` (Key im Browser), `src/lib/research-local.ts` (lokales Modell) |
+| Offene Daten für lokale Modelle | `src/lib/open-data.ts`: Tools `search`, `owid_chart`, `wikipedia_tables` (OWID + Wikipedia, CORS, ohne Key); Verbindung/Modellwahl `src/lib/local-model.ts`, UI `LocalModelSetup.tsx` |
 | Anbieter, Modelle, Preise | `src/lib/providers.ts` (Register + `runResearch`); Keys: `src/lib/keys.ts`; Einstellungsseite: `src/components/Settings.tsx` |
 | Landingpage | `src/landing/Landing.tsx` (Texte `l*` in `i18n.ts`), Live-Demo `RaceDemo.tsx`, Stil `landing.css` |
 | UI-Texte | `src/lib/i18n.ts`: jeder Text als DE- und EN-Eintrag, Komponenten nutzen `useT()` |
@@ -32,11 +33,23 @@ Stand und nächste Schritte: `STATE.md`. Nutzersicht (Englisch): `README.md`, Be
 - **Frames sind reine Funktionen von τ.** Alles mit Geschichte (Rang-Federn, Überholungen, Führungswechsel,
   Kartenzeiten) wird in `buildModel` vorberechnet. Kein Zustand zwischen Frames, sonst weichen Vorschau
   und Export voneinander ab. Zufall nur über `mulberry32(seed)`.
-- **Drei Recherchewege, ein Vertrag** (`DatasetSchema`). Lokal: unveränderte `claude`-CLI mit dem eigenen Abo
-  (nur `WebSearch`/`WebFetch`, `--setting-sources ""`, `--strict-mcp-config`, leeres Temp-cwd, nie `--bare`),
-  nur für den eigenen Gebrauch. Öffentlich: BYOK im Browser, SDKs erst bei Bedarf geladen.
+- **Fünf Anbieter, ein Vertrag** (`DatasetSchema`, strikt über `strictDatasetJsonSchema()`). Lokal über den Server:
+  unveränderte `claude`-CLI mit dem eigenen Abo (nur `WebSearch`/`WebFetch`, `--setting-sources ""`,
+  `--strict-mcp-config`, leeres Temp-cwd, nie `--bare`) und `codex --search exec` mit dem ChatGPT-Abo
+  (`--output-schema`, `--ignore-user-config --ignore-rules`, `-s read-only`, leeres Temp-cwd); beide nur für den
+  eigenen Gebrauch. Im Browser: BYOK und lokales Modell, SDKs erst bei Bedarf geladen.
   Anthropic: Websuche `web_search_20260209`, Datensatz über das strikte Tool `submit_dataset`.
   OpenAI: Responses-API mit `web_search`, Datensatz als strikte JSON-Schema-Ausgabe, `store: false`.
+  Lokales Modell (Ollama, LM Studio, OpenAI-kompatibel über `openai`-SDK mit `baseURL`): hat keine Websuche,
+  recherchiert in zwei Phasen – erst Tool-Runden gegen offene Daten (schnell: 3 Runden, ohne Thinking),
+  dann ein Aufruf mit `response_format` json_schema. **Zahlen tippt das Modell für OWID-Daten nicht ab:**
+  `owid_chart` zeigt nur eine Übersicht (jedes 5. Jahr), die volle Tabelle bleibt im Browser; im Datensatz
+  verweist `series[].data = {table, entity}`, `fillFromTables` trägt die exakten Werte ein. Grund: Qwen
+  tokenisiert jede Ziffer einzeln, ein Laptop verarbeitet ~100 Token/s Prompt und schreibt ~25 Token/s
+  (gemessen: 7:29 → 4:22 Min.). Phase 2 behält die `tools`-Liste, sonst ändert sich der Prompt-Anfang und
+  Ollama verwirft den Cache (29,7k Token neu, 5 Min.). Budget 24k Zeichen Tool-Ergebnisse (Ollama lädt mit
+  32k Kontext). Modelle ohne Tool-Support schreiben aus eigenem Wissen, `notes` sagt das. Gehostete Seite:
+  Ollama braucht `OLLAMA_ORIGINS`, LM Studio den CORS-Schalter.
   Keys gehen nie an einen eigenen Server; kein Abo-Login in Drittprodukten (Anthropic-Bedingungen).
 - **Gemini bewusst nicht eingebaut:** Die Bedingungen für Grounding mit Google Search verbieten, Suchergebnisse
   zu verändern oder weiterzugeben. Ein veröffentlichtes Video ist genau das. Neue Anbieter nur, wenn deren

@@ -1,11 +1,11 @@
 # StatRace
 
-**Turn any topic into an AI-researched bar chart race video.** Type a topic, an AI (Claude or GPT) researches
-time series, dated events and sources on the web, and StatRace animates them into a race with fun-fact cards,
+**Turn any topic into an AI-researched bar chart race video.** Type a topic, an AI (Claude, GPT or a model on your
+own machine) researches time series, dated events and sources, and StatRace animates them into a race with fun-fact cards,
 effects and a soundtrack, rendered to MP4 right in your browser, in 16:9 for YouTube or 9:16 for Shorts and Reels.
 
 **Try it: [statrace.moinsen.dev](https://statrace.moinsen.dev)**. The examples play without any key; researching
-a new topic uses your own Anthropic or OpenAI API key.
+a new topic uses your own Anthropic or OpenAI API key, or a local model through Ollama or LM Studio for free.
 
 ![Most valuable companies, landscape](docs/screenshot-landscape.jpg)
 
@@ -13,9 +13,10 @@ a new topic uses your own Anthropic or OpenAI API key.
 
 ## Features
 
-- **Research by Claude or GPT:** web search and page reads produce yearly values for 10–20 entities, 10–16
-  dated events with a fun fact each, the sources, and notes on estimates. Open data (Our World in Data,
-  World Bank, UN) comes first. Pick the provider and add your key in the settings.
+- **Research by Claude, GPT or a local model:** web search and page reads produce yearly values for 10–20
+  entities, 10–16 dated events with a fun fact each, the sources, and notes on estimates. Open data (Our World
+  in Data, World Bank, UN) comes first. Local models have no web search; they research Our World in Data and
+  Wikipedia through tools that run in your browser. Pick the provider in the settings.
 - **A race that looks like the real thing:** bars glide past each other (spring physics plus hysteresis,
   so near-ties don't flicker), sparks on every overtake, a crown and a "new number 1" badge, a big year
   counter, a timeline with event markers, a world-total counter, and final standings with medals.
@@ -46,6 +47,17 @@ Research runs one of two ways:
 | **Claude Code** (local only) | [Claude Code](https://claude.com/claude-code) installed and logged in | Uses the unmodified `claude` CLI with *your own* subscription, for your own use. |
 | **Claude by API key** | An [Anthropic API key](https://console.anthropic.com/settings/keys) | Works everywhere, including the hosted site. Sonnet 5 (fast) or Opus 5 (thorough), about $0.30–0.60 per run with Sonnet. |
 | **GPT by API key** | An [OpenAI API key](https://platform.openai.com/api-keys) | Works everywhere. GPT-6 Sol (fast) or GPT-6 Astra (thorough), about $0.30–0.60 per run with Sol. |
+| **Codex** (local only) | [Codex CLI](https://developers.openai.com/codex) installed and logged in with ChatGPT | Uses the unmodified `codex` CLI with *your own* ChatGPT plan, with web search, for your own use. |
+| **Local model** | [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai) with a model that can call tools, e.g. Qwen 3.8 27B | Free, no key, works on the hosted site too. Researches open data (Our World in Data, Wikipedia). A run takes a few minutes; models below about 14B parameters make more mistakes. |
+
+**Local model on the hosted site:** Ollama only answers pages it knows. Allow the site once, then restart Ollama:
+
+```bash
+launchctl setenv OLLAMA_ORIGINS "https://statrace.moinsen.dev"   # macOS; elsewhere set OLLAMA_ORIGINS for ollama serve
+```
+
+In LM Studio, turn on CORS in the server settings. Chrome asks once whether the page may access apps on your
+device; allow it. Running StatRace locally (`npm run dev`) needs none of this.
 
 Google Gemini is not offered on purpose: the terms for Grounding with Google Search forbid modifying or
 redistributing grounded results, and a published video does both.
@@ -56,7 +68,8 @@ Without a server key, the app asks for your own ElevenLabs key.
 ## Privacy
 
 The hosted version is a static site with no backend. Your API keys go **straight from your browser** to
-`api.anthropic.com`, `api.openai.com` and `api.elevenlabs.io`, never to a StatRace server. They are stored in
+`api.anthropic.com`, `api.openai.com` and `api.elevenlabs.io`, never to a StatRace server. A local model gets its
+requests from your browser on your own machine; its research tools read `ourworldindata.org` and `wikipedia.org`. They are stored in
 your browser only if you tick "remember". OpenAI requests are sent with `store: false`. Projects and audio live
 in your browser's IndexedDB.
 
@@ -76,7 +89,7 @@ src/landing/ landing page at / with a live demo of the engine; the studio lives 
 src/engine/  race model (monotone splines, rank springs, overtakes) + canvas renderer: every frame is a pure function of time
 src/audio/   composer (offline Web Audio, windowed scheduling), sound effects, mixdown, playback clock
 src/export/  MP4 export with Mediabunny
-src/lib/     research providers (Anthropic and OpenAI in the browser, Claude Code via the local server), keys, i18n, IndexedDB store
+src/lib/     research providers (Anthropic, OpenAI and local models in the browser; Claude Code and Codex via the local server), open-data tools, keys, i18n, IndexedDB store
 ```
 
 Because every frame is a pure function of time, the preview, scrubbing and the export always show the same

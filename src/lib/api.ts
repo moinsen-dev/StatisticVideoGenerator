@@ -12,16 +12,17 @@ export async function getStatus(): Promise<ServerStatus | null> {
   }
 }
 
-/** POST + server-sent events: progress while Claude researches, then the dataset. */
+/** POST + server-sent events: progress while a local CLI (claude or codex) researches, then the dataset. */
 export async function research(
   req: ResearchRequest,
+  cli: 'claude' | 'codex',
   onProgress: (p: ResearchProgress) => void,
   signal: AbortSignal,
 ): Promise<ResearchResult> {
   const res = await fetch('/api/research', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(req),
+    body: JSON.stringify({ ...req, cli }),
     signal,
   });
   if (!res.ok || !res.body) throw new Error(`Server-Fehler ${res.status}`);

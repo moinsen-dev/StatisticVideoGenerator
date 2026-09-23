@@ -1,62 +1,56 @@
 # STATE — StatRace
 
-> **Frozen:** 2026-09-23 12:45
+> **Frozen:** 2026-09-23 13:46
 > **Branch:** `main` · public: https://github.com/moinsen-dev/StatisticVideoGenerator (MIT)
-> **Live:** https://statrace.moinsen.dev (Cloudflare Pages, project `statrace`, static, BYOK): landing page at `/`, studio at `/app`
-> **Last commit:** „feat: Landingpage, Einstellungsseite und OpenAI als zweiter Recherche-Anbieter“ (4a7fefc, pushed, CI green) + this update
+> **Live:** https://statrace.moinsen.dev (Cloudflare Pages, project `statrace`, static, BYOK): landing page at `/`, studio at `/app`. Codex and local models are **not yet live**.
+> **Last commit:** „feat: Recherche ohne API-Key – lokales Modell (Ollama, LM Studio) und Codex“ (local, not pushed)
 > **Dirty:** clean · the local-only branch `idea-loop/monetarisierung` is deliberately not on GitHub
 
 ## Last work-unit
 
-Landing page, settings and a second AI provider (2026-09-23, ~40 min):
+Research without an API key (2026-09-23, ~47 min, of which ~25 min waiting for local model runs):
 
-- **Landing page at `/`, studio at `/app`.**
-  - Live demo: an example race plays through the real engine (portrait format on phones).
-  - Four steps, "Why StatRace", examples, "Bring your own AI" and FAQ.
-  - moinsen block: contact, the free AI analysis for SMEs, and moinsen.dev.
-  - Footer: imprint and privacy link to moinsen.dev.
-  - EN/DE.
-- **Settings at `/app#settings`.**
-  - Choose the research AI: Claude Code (local only), Claude via Anthropic, GPT via OpenAI.
-  - One key per provider, the ElevenLabs key, and "remove all keys".
-- **OpenAI as the second BYOK provider.**
-  - Uses the Responses API with `web_search`, a strict JSON schema and `store: false`.
-  - A key and model pre-check (`models.retrieve`) runs before research, because OpenAI sends rejected POSTs without CORS headers.
-  - Checked in the browser:
-    - An invalid key produces a clear 401 message in DE and EN.
-    - Cancelling works.
-  - A full run with a valid key is still missing.
-- **Gemini left out on purpose:** the grounding terms forbid modifying or redistributing search results, and a published video does both.
+- **Codex CLI as a second subscription provider** (ChatGPT plan, local server only).
+  - Runs `codex --search exec` with `--output-schema` and `--ignore-user-config`.
+  - Real run, „Meistabonnierte YouTube-Kanäle“: 2:34 min, 4 searches, 18 channels 2010–2025.
+- **Local model through Ollama, LM Studio or any OpenAI-compatible server**, also usable on the hosted site.
+  - It researches open data through tools that run in the browser: OWID and Wikipedia.
+  - The app fills OWID values in exactly, from the full table, so the model only references entities instead of copying numbers.
+  - Measured with Qwen 3.8 27B MLX (CO₂ by country): 7:29 → **4:22 min**. 19 countries × 35 years, exact values, sources linked.
+  - Qwen 3.5 4B: 92 s, but it read no source and got numbers wrong. Such datasets are now marked „nicht recherchiert“.
+- **UI:**
+  - Provider dropdown on the home screen.
+  - Settings with connection check: server down vs. `OLLAMA_ORIGINS` missing.
+  - Landing page: local model card („kostenlos“) and FAQ „Geht das ganz ohne API-Key?“.
+- **Gemini CLI left out:** same grounding terms as the Gemini API.
 
 ## Next intended step
 
-1. Run one full research each with a real Anthropic key and a real OpenAI key on https://statrace.moinsen.dev/app.
-   - Success: a video with a dataset.
-   - If the API rejects the request (400), the message appears verbatim in the research view. The fix goes into `src/lib/research-<provider>.ts`.
+1. Uli approves push + deploy.
+2. On the hosted site, use a local model once with `OLLAMA_ORIGINS` set. It has only been tested from localhost so far.
+3. Still open: a run with a real Anthropic key and a real OpenAI key.
 
 ## Open friction
 
-- **Unverified request bodies.** Neither BYOK path has seen a valid key:
+- **Local speed:** on an M4 Pro, prompt processing runs at ~100 tokens/s and output at ~25 tokens/s.
+  - Wikipedia tables are expensive, because Qwen reads every digit as a token.
+  - Only OWID values are filled in exactly. Wikipedia numbers are still typed by the model.
+- **Unverified request bodies:** neither BYOK path has seen a valid key:
   - OpenAI: strict JSON schema combined with `web_search`.
   - Anthropic: strict tool combined with web search.
-- **Costs are estimates** from list prices, in `src/lib/providers.ts` and the adapters. Update them when models or prices change.
-- **Research duration:** a run takes 2–5 min, mostly for writing the dataset (~11k characters).
-- **The figures are estimates** from secondary sources. The app shows its sources and the prompt prefers open data. Check the numbers in the Data tab before publishing.
-- **Local CLI mode:** it uses your own subscription and is for your own use only. The hosted version uses BYOK.
-- **Emoji flags** render on macOS but are missing on Windows.
+- **Events come from the model's own knowledge** for local models; there is no web search. Check them in the Data tab.
+- **Local CLI modes** (Claude Code, Codex) use your own subscription and are for your own use only.
 
 ## Live context for the agent
 
 - **Hot files:**
-  - `src/lib/providers.ts`, `src/lib/research-openai.ts`, `src/lib/research-anthropic.ts`
-  - `src/landing/Landing.tsx`, `src/lib/i18n.ts`
+  - `src/lib/research-local.ts`, `src/lib/open-data.ts`, `server/research-codex.ts`, `src/lib/providers.ts`
 - **Deploy:** `npm run build && npx wrangler pages deploy dist --project-name statrace --branch main --commit-dirty=true`
-- **Calibration:**
-  - OSS release (BYOK, i18n, examples, deploy): ~30 min.
-  - Landing page + settings + OpenAI adapter, including research and browser checks: ~40 min.
+- **Test a local model:**
+  - In the Browser pane: `/app`, choose „Lokales Modell“ as the research AI, then check the Ollama log in `~/.ollama/logs/server.log`.
+  - It prints „Prompt processing progress … total=N“. N shows how many tokens were **not** served from the cache.
 
 ## Docs
 
-- `README.md`: product, providers, local operation, privacy, architecture
-- `CONTRIBUTING.md`: rules for contributors, including how to add a provider
-- `CLAUDE.md`: commands, trigger map, fixed rules
+- `README.md`: product, providers (incl. `OLLAMA_ORIGINS`), privacy, architecture · `CONTRIBUTING.md`: rules for contributors
+- `CLAUDE.md`: commands, trigger map, fixed rules (incl. the local model design)

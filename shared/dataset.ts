@@ -78,6 +78,34 @@ export function datasetJsonSchema(): Record<string, unknown> {
   return schema;
 }
 
+type Schema = Record<string, unknown>;
+
+/** Strict schemas want anyOf instead of type arrays, and closed objects everywhere. */
+function toStrict(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(toStrict);
+  if (!node || typeof node !== 'object') return node;
+  const src = node as Schema;
+  const out: Schema = {};
+  for (const [k, v] of Object.entries(src)) out[k] = toStrict(v);
+  if (Array.isArray(src.type)) {
+    const { type, description, ...rest } = out;
+    return {
+      ...(description ? { description } : {}),
+      anyOf: (type as string[]).map((t) => (t === 'null' ? { type: 'null' } : { ...rest, type: t })),
+    };
+  }
+  if (out.type === 'object' && out.properties) {
+    out.additionalProperties = false;
+    out.required = Object.keys(out.properties as Schema);
+  }
+  return out;
+}
+
+/** The dataset schema in the strict form that strict tools and strict JSON-schema outputs require. */
+export function strictDatasetJsonSchema(): Record<string, unknown> {
+  return toStrict(datasetJsonSchema()) as Record<string, unknown>;
+}
+
 // ---------------------------------------------------------------------------
 // Normalisation: models return almost-right data; the renderer needs exactly-right data.
 
@@ -201,7 +229,13 @@ export type ResearchMeta = {
 };
 export type ResearchResult = { dataset: Dataset; meta: ResearchMeta };
 
-export type ServerStatus = {
-  claude: { available: boolean; loggedIn: boolean; subscription: string | null; version: string | null; error: string | null };
-  elevenlabs: boolean;
+export type CliStatus = {
+  available: boolean;
+  loggedIn: boolean;
+  subscription: string | null;
+  version: string | null;
+  error: string | null;
 };
+
+/** Signed-in coding CLIs the local server can research with, on the user's own subscription. */
+export type ServerStatus = { claude: CliStatus; codex: CliStatus; elevenlabs: boolean };

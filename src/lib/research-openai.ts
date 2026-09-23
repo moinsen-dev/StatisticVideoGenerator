@@ -1,13 +1,13 @@
 import type OpenAISDK from 'openai';
 import {
-  datasetJsonSchema,
   parseDataset,
+  strictDatasetJsonSchema,
   type ResearchProgress,
   type ResearchRequest,
   type ResearchResult,
 } from '../../shared/dataset.ts';
 import { systemPrompt, userPrompt } from '../../shared/prompt.ts';
-import { clip, explainApiError, message, progressEmitter, toStrict, writingMeter } from './research-common.ts';
+import { clip, explainApiError, message, progressEmitter, writingMeter } from './research-common.ts';
 
 // Research with the visitor's own OpenAI API key, straight from the browser (BYOK).
 // Responses API with the hosted web_search tool; the dataset arrives as structured output
@@ -51,7 +51,7 @@ export async function researchWithOpenAI(
           format: {
             type: 'json_schema',
             name: 'dataset',
-            schema: toStrict(datasetJsonSchema()) as Record<string, unknown>,
+            schema: strictDatasetJsonSchema(),
             strict: true,
           },
         },
