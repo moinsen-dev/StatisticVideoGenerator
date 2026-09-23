@@ -1,9 +1,9 @@
 # STATE — StatRace
 
-> **Frozen:** 2026-09-23 13:46
+> **Frozen:** 2026-09-23 13:58
 > **Branch:** `main` · public: https://github.com/moinsen-dev/StatisticVideoGenerator (MIT)
-> **Live:** https://statrace.moinsen.dev (Cloudflare Pages, project `statrace`, static, BYOK): landing page at `/`, studio at `/app`. Codex and local models are **not yet live**.
-> **Last commit:** „feat: Recherche ohne API-Key – lokales Modell (Ollama, LM Studio) und Codex“ (local, not pushed)
+> **Live:** https://statrace.moinsen.dev (Cloudflare Pages, project `statrace`, static, BYOK): landing page at `/`, studio at `/app`, local models included (Codex only locally).
+> **Last commit:** „feat: Recherche ohne API-Key – lokales Modell (Ollama, LM Studio) und Codex“ (a168a43, pushed, CI green) + hint fix for the hosted page
 > **Dirty:** clean · the local-only branch `idea-loop/monetarisierung` is deliberately not on GitHub
 
 ## Last work-unit
@@ -26,9 +26,11 @@ Research without an API key (2026-09-23, ~47 min, of which ~25 min waiting for l
 
 ## Next intended step
 
-1. Uli approves push + deploy.
-2. On the hosted site, use a local model once with `OLLAMA_ORIGINS` set. It has only been tested from localhost so far.
-3. Still open: a run with a real Anthropic key and a real OpenAI key.
+1. Uli uses a local model once on the hosted site:
+   - Run `launchctl setenv OLLAMA_ORIGINS "https://statrace.moinsen.dev"` and restart Ollama.
+   - Allow Chrome's prompt for access to apps on the device.
+   - So far only tested from localhost. The Browser pane blocks localhost from public pages without asking.
+2. Still open: a run with a real Anthropic key and a real OpenAI key.
 
 ## Open friction
 

@@ -197,6 +197,8 @@ const DE = {
     'Der Server antwortet, erlaubt diese Seite aber nicht. Ollama: im Terminal launchctl setenv OLLAMA_ORIGINS "{origin}" ausführen und Ollama neu starten (Linux, Windows: Umgebungsvariable OLLAMA_ORIGINS setzen). LM Studio: in den Server-Einstellungen CORS einschalten.',
   localOffline:
     'Kein Server erreichbar. Starte Ollama oder den Server in LM Studio. Chrome fragt beim ersten Mal, ob diese Seite auf Apps auf deinem Gerät zugreifen darf: erlauben.',
+  localOfflineHosted:
+    'Keine Verbindung. Läuft Ollama oder der Server in LM Studio? Für diese Seite zusätzlich: Chrome fragt einmal, ob sie auf Apps auf deinem Gerät zugreifen darf (erlauben), und Ollama muss sie freigeben: im Terminal launchctl setenv OLLAMA_ORIGINS "{origin}" ausführen und Ollama neu starten. LM Studio: in den Server-Einstellungen CORS einschalten.',
   localNoModel: 'Kein Modell gewählt',
   localNoTools: 'Dieses Modell kann keine Werkzeuge nutzen: Die Werte kommen aus seinem eigenen Wissen.',
   keySaved: 'Key hinterlegt',
@@ -469,6 +471,8 @@ const EN: Record<MessageKey, string> = {
     'The server answers but does not allow this page. Ollama: run launchctl setenv OLLAMA_ORIGINS "{origin}" in a terminal and restart Ollama (Linux, Windows: set the OLLAMA_ORIGINS environment variable). LM Studio: turn on CORS in the server settings.',
   localOffline:
     'No server reachable. Start Ollama or the server in LM Studio. The first time, Chrome asks whether this page may access apps on your device: allow it.',
+  localOfflineHosted:
+    'No connection. Is Ollama or the LM Studio server running? For this page, also: Chrome asks once whether it may access apps on your device (allow it), and Ollama must allow it: run launchctl setenv OLLAMA_ORIGINS "{origin}" in a terminal and restart Ollama. LM Studio: turn on CORS in the server settings.',
   localNoModel: 'No model chosen',
   localNoTools: 'This model cannot use tools: the values come from its own knowledge.',
   keySaved: 'Key added',

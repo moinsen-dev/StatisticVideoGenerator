@@ -41,7 +41,9 @@ export function LocalModelSetup({ onChange }: { onChange?: () => void }) {
     ok: t('localFound', { n: models.length }),
     empty: t('localNone'),
     blocked: t('localBlocked', { origin: location.origin }),
-    offline: t('localOffline'),
+    // On a public page the browser may block localhost before the server is even asked, so both
+    // causes look alike; name the origin setting too.
+    offline: /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? t('localOffline') : t('localOfflineHosted', { origin: location.origin }),
   }[state];
 
   return (
