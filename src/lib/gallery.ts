@@ -7,7 +7,7 @@ import type { Project } from './project.ts';
 
 export type GalleryEntry = { id: string; title: string; subtitle: string; language: 'de' | 'en'; icons: string[]; model: string | null };
 export type GalleryItem = { id: string; title: string; topic: string; bars: number; model: string | null; dataset: Dataset };
-export type Decision = { status: 'approved' | 'rejected' | 'removed' | 'reported'; reason: string | null };
+export type Decision = { status: 'approved' | 'removed' | 'reported'; reason: string | null };
 export type GalleryStatus = Decision | null;
 export type Submission = { id: string; token: string; submittedAt: number };
 
@@ -34,7 +34,8 @@ export async function listGallery(): Promise<GalleryEntry[] | null> {
 
 export const getGalleryItem = (id: string) => call<GalleryItem>(`/${encodeURIComponent(id)}`);
 
-export async function submitToGallery(project: Project): Promise<Submission> {
+/** Submits an entry the submitter's AI has approved (src/lib/review.ts); it is public at once. */
+export async function submitToGallery(project: Project, reviewModel: string): Promise<Submission> {
   const { id, token } = await call<{ id: string; token: string }>('', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -43,6 +44,7 @@ export async function submitToGallery(project: Project): Promise<Submission> {
       topic: project.topic,
       bars: project.settings.bars,
       model: project.research?.model ?? null,
+      reviewModel,
       accept: true,
     }),
   });
@@ -62,9 +64,9 @@ export const withdrawFromGallery = (sub: Submission) =>
 
 export type Notice = { reason: string; name: string; email: string; goodFaith: true };
 
-/** Reports an entry; the answer is the automatic decision ('reported' while it could not run). */
+/** Reports an entry: it is hidden at once until moinsen decides. */
 export const reportGalleryItem = (id: string, notice: Notice) =>
-  call<Decision>(`/${encodeURIComponent(id)}/report`, {
+  call<{ status: 'reported' }>(`/${encodeURIComponent(id)}/report`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(notice),
@@ -74,7 +76,7 @@ export const entryUrl = (id: string) => `${location.origin}/app#g=${id}`;
 
 // --- oversight (admin token)
 
-export type Reviewed = GalleryItem & Decision & { subtitle: string; language: string; created_at: number };
+export type Reviewed = GalleryItem & Decision & { subtitle: string; language: string; review_model: string; created_at: number };
 export type Report = {
   id: number;
   submission_id: string;
@@ -91,7 +93,7 @@ const auth = (token: string) => ({ authorization: `Bearer ${token}` });
 
 export const moderationQueue = (token: string) => call<{ recent: Reviewed[]; reports: Report[] }>('/admin/queue', { headers: auth(token) });
 
-export const decide = (token: string, id: string, status: 'approved' | 'rejected' | 'removed', reason?: string) =>
+export const decide = (token: string, id: string, status: 'approved' | 'removed', reason?: string) =>
   call<null>(`/admin/${encodeURIComponent(id)}`, {
     method: 'POST',
     headers: { ...auth(token), 'content-type': 'application/json' },

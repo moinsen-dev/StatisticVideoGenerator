@@ -7,9 +7,9 @@ import { LangSwitch } from './LangSwitch.tsx';
 
 const TOKEN = 'statrace:admin';
 
-/** Oversight page (/app#moderate), needs the admin token. The AI decides every submission and report
- *  on its own; here the operator can spot-check, override, and decide reports whose review failed.
- *  Waiting notifiers get the decision by mail from the server. */
+/** Oversight page (/app#moderate), needs the admin token. Entries appear once the submitter's own AI
+ *  has approved them; reported entries are hidden and wait here for the operator's decision, which the
+ *  server mails to notifiers who left an email. The latest entries can be spot-checked and removed. */
 export function Moderation(props: { onOpen: (title: string, dataset: Dataset, bars: number) => void; onBack: () => void }) {
   const t = useT();
   const lang = useLang();
@@ -34,8 +34,10 @@ export function Moderation(props: { onOpen: (title: string, dataset: Dataset, ba
     }
   };
 
-  const act = async (id: string, status: 'approved' | 'removed') => {
-    const reason = status === 'removed' ? prompt(t('modReasonPrompt')) : '';
+  // A removal needs a reason (the submitter sees it); so does keeping a reported entry (the notifier gets it).
+  const act = async (id: string, status: 'approved' | 'removed', current: Decision['status']) => {
+    const ask = status === 'removed' || current === 'reported';
+    const reason = ask ? prompt(t('modReasonPrompt'), status === 'approved' ? t('modKeepReason') : '') : '';
     if (reason === null) return;
     try {
       await decide(token, id, status, reason || undefined);
@@ -48,16 +50,16 @@ export function Moderation(props: { onOpen: (title: string, dataset: Dataset, ba
   const when = (ms: number) =>
     new Date(ms).toLocaleString(lang === 'de' ? 'de-DE' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' });
   const label = (status: Decision['status']) =>
-    ({ approved: t('modApproved'), rejected: t('modRejected'), removed: t('modRemoved'), reported: t('modReported') })[status];
+    ({ approved: t('modApproved'), removed: t('modRemoved'), reported: t('modReported') })[status];
   const actions = (id: string, status: Decision['status']) => (
     <>
       {status !== 'approved' && (
-        <button type="button" className="primary small" onClick={() => void act(id, 'approved')}>
+        <button type="button" className="primary small" onClick={() => void act(id, 'approved', status)}>
           {t('modApprove')}
         </button>
       )}
-      {status !== 'removed' && status !== 'rejected' && (
-        <button type="button" className="ghost small" onClick={() => void act(id, 'removed')}>
+      {status !== 'removed' && (
+        <button type="button" className="ghost small" onClick={() => void act(id, 'removed', status)}>
           {t('modRemove')}
         </button>
       )}
@@ -119,7 +121,8 @@ export function Moderation(props: { onOpen: (title: string, dataset: Dataset, ba
                   <div>
                     <strong>{item.title}</strong>
                     <p className="hint">
-                      {label(item.status)} · {item.language.toUpperCase()} · {item.model ?? '—'} · {when(item.created_at)}
+                      {label(item.status)} · {item.language.toUpperCase()} · {item.model ?? '—'} ·{' '}
+                      {t('modReviewedBy', { ai: item.review_model })} · {when(item.created_at)}
                     </p>
                     <p className="hint">{item.topic}</p>
                     {item.reason && <p>{item.reason}</p>}

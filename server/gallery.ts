@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { parseDataset, type Dataset } from '../shared/dataset.ts';
 import { GALLERY_LICENSE, paywalledSources } from '../shared/gallery.ts';
 import { OPERATOR, type Mailer } from './mail.ts';
-import type { Moderator, Verdict } from './moderation.ts';
 
 // Public gallery. Visitors submit a project (the dataset JSON only: no audio, no keys, no accounts).
-// Nobody at moinsen reviews by hand: fixed checks and an AI review decide at once, and a reported entry
-// is hidden and reviewed again right away (DSA Art. 16). Every decision says that it was automated.
+// moinsen runs no AI and reviews nothing beforehand: the submitter's own AI checks the entry against
+// the gallery rules in the browser (src/lib/review.ts), and an entry passes the fixed checks here.
+// A report hides the entry at once until the operator decides (DSA Art. 16, notice and action).
 // One Hono app for both runtimes: the local Node server (SQLite) and a Cloudflare Pages Function (D1).
 
 export type Row = Record<string, unknown>;
@@ -19,20 +19,13 @@ export interface Sql {
   run(sql: string, ...params: unknown[]): Promise<void>;
 }
 
-export type GalleryConfig = {
-  sql: Sql;
-  /** null: no reviewer configured, so nothing gets published */
-  moderate: Moderator | null;
-  mail: Mailer;
-  adminToken: string | undefined;
-  salt: string;
-};
+export type GalleryConfig = { sql: Sql; mail: Mailer; adminToken: string | undefined; salt: string };
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS submissions (
     id TEXT PRIMARY KEY, token_hash TEXT NOT NULL, status TEXT NOT NULL, reason TEXT,
     title TEXT NOT NULL, subtitle TEXT NOT NULL, language TEXT NOT NULL, topic TEXT NOT NULL,
-    bars INTEGER NOT NULL, icons TEXT NOT NULL, model TEXT, dataset TEXT NOT NULL,
+    bars INTEGER NOT NULL, icons TEXT NOT NULL, model TEXT, review_model TEXT NOT NULL, dataset TEXT NOT NULL,
     created_at INTEGER NOT NULL, reviewed_at INTEGER)`,
   `CREATE INDEX IF NOT EXISTS submissions_status ON submissions (status, reviewed_at)`,
   `CREATE TABLE IF NOT EXISTS reports (
@@ -41,20 +34,22 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS rate (key TEXT PRIMARY KEY, day TEXT NOT NULL, count INTEGER NOT NULL)`,
 ];
 
-/** Per visitor and day; `reviews` counts all AI reviews of a day together and caps their cost. */
-const LIMITS = { submissions: 5, reports: 20, reviews: 300 } as const;
+/** Per visitor and day. */
+const LIMITS = { submissions: 5, reports: 20 } as const;
 const MAX_BODY = 256_000;
-const KEEP_MS = 30 * 24 * 3600_000; // rejected/removed entries and handled reports stay 30 days, then go
+const KEEP_MS = 30 * 24 * 3600_000; // removed entries and handled reports stay 30 days, then go
 
 const SubmitSchema = z.object({
   dataset: z.unknown(),
   topic: z.string().trim().min(3).max(600),
   bars: z.number().int().min(3).max(15),
   model: z.string().max(80).nullable().optional(),
+  /** the AI that approved the entry in the submitter's browser */
+  reviewModel: z.string().trim().min(1).max(80),
   accept: z.literal(true),
 });
 // Notice and action, DSA Art. 16(2): reasons, location (the entry), name and email of the notifier
-// (offered, not required: they only serve to send the decision) and a statement of good faith.
+// (offered, not required: they only serve to send confirmation and decision) and a statement of good faith.
 const ReportSchema = z.object({
   reason: z.string().trim().min(10).max(2000),
   name: z.string().trim().max(200).optional(),
@@ -62,7 +57,7 @@ const ReportSchema = z.object({
   goodFaith: z.literal(true),
 });
 const DecisionSchema = z.object({
-  status: z.enum(['approved', 'rejected', 'removed']),
+  status: z.enum(['approved', 'removed']),
   reason: z.string().trim().max(1000).optional(),
 });
 
@@ -110,51 +105,51 @@ function sameSecret(a: string, b: string): boolean {
 
 type Case = { name?: string | null; title: string; url: string; terms: string };
 
-/** Confirmation and decision for the notifier in one mail (DSA Art. 16(4)–(6)), German and English. */
-function decisionMail(n: Case, removed: boolean, reason: string, automated: boolean) {
+/** The decision for the notifier (DSA Art. 16(5)), German and English. */
+function decisionMail(n: Case, removed: boolean, reason: string) {
   const hello = n.name ? ` ${n.name}` : '';
   return {
     subject: 'StatRace: Entscheidung zu Ihrer Meldung / Decision on your report',
     text: `Guten Tag${hello},
 
-Ihre Meldung zum Galerie-Eintrag „${n.title}“ (${n.url}) ist eingegangen und wurde geprüft.
+wir haben Ihre Meldung zum Galerie-Eintrag „${n.title}“ (${n.url}) geprüft.
 
 Entscheidung: ${removed ? 'Der Eintrag wurde entfernt.' : 'Der Eintrag verstößt nicht gegen die Galerie-Regeln und bleibt online.'}
 Begründung: ${reason || '–'}
 
-${automated ? 'Die Prüfung hat ein automatisches System (KI) nach den Galerie-Regeln vorgenommen.' : 'Diese Entscheidung hat ein Mensch getroffen.'} Wenn Sie nicht einverstanden sind, antworten Sie auf diese E-Mail. Der Rechtsweg bleibt Ihnen unbenommen.
+Wenn Sie nicht einverstanden sind, antworten Sie auf diese E-Mail. Der Rechtsweg bleibt Ihnen unbenommen.
 Galerie-Regeln: ${n.terms}
 
 ---
 
 Hello${hello},
 
-your report about the gallery entry “${n.title}” (${n.url}) has been received and reviewed.
+we have reviewed your report about the gallery entry “${n.title}” (${n.url}).
 
 Decision: ${removed ? 'The entry has been removed.' : 'The entry does not break the gallery rules and stays online.'}
 Reason: ${reason || '–'}
 
-${automated ? 'An automated system (AI) reviewed the entry under the gallery rules.' : 'A person made this decision.'} If you disagree, reply to this email. You may also seek judicial redress.
+If you disagree, reply to this email. You may also seek judicial redress.
 Gallery rules: ${n.terms}
 
 moinsen · StatRace`,
   };
 }
 
-/** Confirmation of receipt when the automatic review could not run (DSA Art. 16(4)). */
+/** Confirmation of receipt (DSA Art. 16(4)); no automated means decide on reports (Art. 16(6)). */
 function receiptMail(n: Case) {
   const hello = n.name ? ` ${n.name}` : '';
   return {
     subject: 'StatRace: Ihre Meldung ist eingegangen / Your report was received',
     text: `Guten Tag${hello},
 
-Ihre Meldung zum Galerie-Eintrag „${n.title}“ (${n.url}) ist eingegangen. Der Eintrag ist ausgeblendet, bis er geprüft ist; die Entscheidung schicken wir Ihnen per E-Mail.
+Ihre Meldung zum Galerie-Eintrag „${n.title}“ (${n.url}) ist eingegangen. Der Eintrag ist ausgeblendet, bis ein Mensch bei moinsen sie geprüft hat; die Entscheidung schicken wir Ihnen per E-Mail.
 
 ---
 
 Hello${hello},
 
-your report about the gallery entry “${n.title}” (${n.url}) has been received. The entry is hidden until it has been reviewed; we will email you the decision.
+your report about the gallery entry “${n.title}” (${n.url}) has been received. The entry is hidden until a person at moinsen has reviewed it; we will email you the decision.
 
 moinsen · StatRace`,
   };
@@ -183,7 +178,7 @@ export function galleryApi(configure: (c: Context) => GalleryConfig) {
     const { sql, salt } = c.get('gallery');
     const day = today();
     const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'local';
-    const key = action === 'reviews' ? `reviews:${day}` : `${action}:${await sha256(`${salt}:${day}:${ip}`)}`;
+    const key = `${action}:${await sha256(`${salt}:${day}:${ip}`)}`;
     await sql.run('DELETE FROM rate WHERE day <> ?', day);
     const row = await sql.first('SELECT count FROM rate WHERE key = ?', key);
     if (Number(row?.count ?? 0) >= LIMITS[action]) return false;
@@ -210,10 +205,10 @@ export function galleryApi(configure: (c: Context) => GalleryConfig) {
 
   app.get('/', async (c) => {
     const { sql } = c.get('gallery');
-    // Housekeeping without a cron: rate hashes live for their day, rejected entries and handled
+    // Housekeeping without a cron: rate hashes live for their day, removed entries and handled
     // reports for 30 days (these deletes usually match nothing, so they write nothing).
     await sql.run('DELETE FROM rate WHERE day <> ?', today());
-    await sql.run("DELETE FROM submissions WHERE status IN ('rejected', 'removed') AND reviewed_at < ?", Date.now() - KEEP_MS);
+    await sql.run("DELETE FROM submissions WHERE status = 'removed' AND reviewed_at < ?", Date.now() - KEEP_MS);
     await sql.run('DELETE FROM reports WHERE handled = 1 AND created_at < ?', Date.now() - KEEP_MS);
     const rows = await sql.all(
       "SELECT id, title, subtitle, language, icons, model, reviewed_at FROM submissions WHERE status = 'approved' ORDER BY reviewed_at DESC LIMIT 60",
@@ -222,7 +217,6 @@ export function galleryApi(configure: (c: Context) => GalleryConfig) {
   });
 
   app.post('/', async (c) => {
-    const { sql, moderate } = c.get('gallery');
     const raw = await c.req.text();
     if (raw.length > MAX_BODY) return c.json({ message: 'too large' }, 413);
     let body: unknown = null;
@@ -239,27 +233,16 @@ export function galleryApi(configure: (c: Context) => GalleryConfig) {
     } catch (err) {
       return c.json({ message: (err as Error).message }, 400);
     }
-    if (!moderate) return c.json({ message: 'review unavailable' }, 503);
-    if (!(await allowed(c, 'submissions')) || !(await allowed(c, 'reviews'))) return c.json({ message: 'limit' }, 429);
+    if (!(await allowed(c, 'submissions'))) return c.json({ message: 'limit' }, 429);
 
-    let verdict: Verdict;
-    try {
-      verdict = await moderate({ dataset, topic: parsed.data.topic });
-    } catch (err) {
-      console.error('gallery review failed', err);
-      return c.json({ message: 'review unavailable' }, 503);
-    }
     const id = randomId(6);
     const token = randomId(18);
-    const status = verdict.allowed ? 'approved' : 'rejected';
     const now = Date.now();
-    await sql.run(
-      `INSERT INTO submissions (id, token_hash, status, reason, title, subtitle, language, topic, bars, icons, model, dataset, created_at, reviewed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    await c.get('gallery').sql.run(
+      `INSERT INTO submissions (id, token_hash, status, title, subtitle, language, topic, bars, icons, model, review_model, dataset, created_at, reviewed_at)
+       VALUES (?, ?, 'approved', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       id,
       await sha256(token),
-      status,
-      verdict.reason,
       dataset.title,
       dataset.subtitle,
       dataset.language,
@@ -267,20 +250,21 @@ export function galleryApi(configure: (c: Context) => GalleryConfig) {
       parsed.data.bars,
       JSON.stringify(dataset.series.slice(0, 3).map((s) => s.icon)),
       parsed.data.model ?? null,
+      parsed.data.reviewModel,
       JSON.stringify(dataset),
       now,
       now,
     );
-    return c.json({ id, token, status, reason: verdict.reason }, 201);
+    return c.json({ id, token }, 201);
   });
 
-  // Oversight for the operator, not needed day to day: the latest automatic decisions (to spot-check
-  // and override) and the latest reports, including those whose automatic review failed.
+  // Oversight for the operator: reported entries wait here for a decision; the latest entries can be
+  // spot-checked and removed.
   app.get('/admin/queue', async (c) => {
     if (!admin(c)) return c.json({ message: 'forbidden' }, 403);
     const { sql } = c.get('gallery');
     const recent = await sql.all(
-      'SELECT id, status, reason, title, subtitle, language, topic, bars, model, dataset, created_at FROM submissions ORDER BY created_at DESC LIMIT 50',
+      'SELECT id, status, reason, title, subtitle, language, topic, bars, model, review_model, dataset, created_at FROM submissions ORDER BY created_at DESC LIMIT 50',
     );
     const reports = await sql.all(
       `SELECT r.id, r.submission_id, r.reason, r.handled, r.created_at, r.contact IS NOT NULL AS has_contact,
@@ -290,7 +274,7 @@ export function galleryApi(configure: (c: Context) => GalleryConfig) {
     return c.json({ recent: recent.map((r) => ({ ...r, dataset: JSON.parse(String(r.dataset)) })), reports });
   });
 
-  // A human override. Notifiers still waiting (their automatic review failed) get the decision now.
+  // The operator's decision; notifiers who left an email get it now, then their name and email go.
   app.post('/admin/:id', async (c) => {
     if (!admin(c)) return c.json({ message: 'forbidden' }, 403);
     const parsed = DecisionSchema.safeParse(await c.req.json().catch(() => null));
@@ -303,7 +287,7 @@ export function galleryApi(configure: (c: Context) => GalleryConfig) {
     await sql.run('UPDATE submissions SET status = ?, reason = ?, reviewed_at = ? WHERE id = ?', status, reason || null, Date.now(), id);
     const waiting = await sql.all('SELECT name, contact FROM reports WHERE submission_id = ? AND handled = 0 AND contact IS NOT NULL', id);
     for (const r of waiting) {
-      const notice = decisionMail({ name: r.name as string | null, title: String(entry.title), ...links(c, id) }, status !== 'approved', reason, false);
+      const notice = decisionMail({ name: r.name as string | null, title: String(entry.title), ...links(c, id) }, status === 'removed', reason);
       await mail({ to: String(r.contact), ...notice }).catch((err) => console.error('gallery mail failed', err));
     }
     await sql.run('UPDATE reports SET handled = 1, name = NULL, contact = NULL WHERE submission_id = ?', id);
@@ -338,15 +322,14 @@ export function galleryApi(configure: (c: Context) => GalleryConfig) {
     return c.body(null, 204);
   });
 
-  // A report hides the entry at once and triggers a fresh review with the report attached. The notifier
-  // (if they left an email) gets confirmation and decision in one mail, the operator a note without
-  // their name or email; then name and email are deleted.
+  // A report hides the entry at once; the operator decides on the oversight page. The notifier gets a
+  // confirmation if they left an email, the operator a note without their name or email.
   app.post('/:id/report', async (c) => {
     const parsed = ReportSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ message: 'invalid' }, 400);
-    const { sql, moderate, mail } = c.get('gallery');
+    const { sql, mail } = c.get('gallery');
     const id = c.req.param('id');
-    const entry = await sql.first("SELECT title, topic, dataset FROM submissions WHERE id = ? AND status = 'approved'", id);
+    const entry = await sql.first("SELECT title FROM submissions WHERE id = ? AND status = 'approved'", id);
     if (!entry) return c.json({ message: 'not found' }, 404);
     if (!(await allowed(c, 'reports'))) return c.json({ message: 'limit' }, 429);
 
@@ -360,40 +343,16 @@ export function galleryApi(configure: (c: Context) => GalleryConfig) {
       report.email || null,
       Date.now(),
     );
-
-    let verdict: Verdict | null = null;
-    if (moderate && (await allowed(c, 'reviews'))) {
-      try {
-        verdict = await moderate({ dataset: JSON.parse(String(entry.dataset)) as Dataset, topic: String(entry.topic), report: report.reason });
-      } catch (err) {
-        console.error('gallery re-review failed', err);
-      }
-    }
     const title = String(entry.title);
     const where = links(c, id);
     const quiet = (err: unknown) => console.error('gallery mail failed', err);
-
-    if (!verdict) {
-      // No automatic decision: the entry stays hidden until the operator decides on the moderation page.
-      if (report.email) await mail({ to: report.email, ...receiptMail({ name: report.name, title, ...where }) }).catch(quiet);
-      await mail({
-        to: OPERATOR,
-        subject: `StatRace: Meldung ohne automatische Prüfung – ${title}`,
-        text: `Die automatische Prüfung ist ausgefallen. Der Eintrag ist ausgeblendet, bis du ihn freigibst oder entfernst: ${where.moderation}\n\nEintrag: ${where.url}\nMeldung: ${report.reason}`,
-      }).catch(quiet);
-      return c.json({ status: 'reported', reason: null }, 202);
-    }
-
-    const removed = !verdict.allowed;
-    await sql.run('UPDATE submissions SET status = ?, reason = ?, reviewed_at = ? WHERE id = ?', removed ? 'removed' : 'approved', verdict.reason, Date.now(), id);
-    if (report.email) await mail({ to: report.email, ...decisionMail({ name: report.name, title, ...where }, removed, verdict.reason, true) }).catch(quiet);
+    if (report.email) await mail({ to: report.email, ...receiptMail({ name: report.name, title, ...where }) }).catch(quiet);
     await mail({
       to: OPERATOR,
-      subject: `StatRace: Meldung – ${title} – ${removed ? 'entfernt' : 'bleibt online'}`,
-      text: `Automatische Entscheidung: ${removed ? 'entfernt' : 'bleibt online'}\nBegründung: ${verdict.reason}\n\nEintrag: ${where.url}\nMeldung: ${report.reason}\n\nÜberstimmen: ${where.moderation}`,
+      subject: `StatRace: Meldung – ${title}`,
+      text: `Der Eintrag ist ausgeblendet, bis du ihn freigibst oder entfernst: ${where.moderation}\n\nEintrag: ${where.url}\nMeldung: ${report.reason}\nMelder-E-Mail: ${report.email ? 'ja, bekommt deine Entscheidung' : 'nein'}`,
     }).catch(quiet);
-    await sql.run('UPDATE reports SET handled = 1, name = NULL, contact = NULL WHERE submission_id = ? AND handled = 0', id);
-    return c.json({ status: removed ? 'removed' : 'approved', reason: verdict.reason });
+    return c.json({ status: 'reported' }, 202);
   });
 
   return app;

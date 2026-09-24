@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { entryUrl, listGallery, reportGalleryItem, type Decision, type GalleryEntry } from '../lib/gallery.ts';
+import { entryUrl, listGallery, reportGalleryItem, type GalleryEntry } from '../lib/gallery.ts';
 import { useLang, useT } from '../lib/i18n.ts';
 import { CONTACT_MAIL, termsUrl } from '../lib/links.ts';
 
@@ -61,8 +61,8 @@ export function GalleryList({ heading, className = '' }: { heading: 'h2' | 'h3';
 }
 
 /** Notice form after DSA Art. 16(2): reasons, the exact location, optional name and email (only used to
- *  send the decision), and a statement of good faith. The entry is reviewed again at once; the dialog
- *  shows the automatic decision. */
+ *  send confirmation and decision), and a statement of good faith. The entry is hidden at once until
+ *  moinsen decides. */
 export function ReportDialog({ entry, onClose }: { entry: { id: string; title: string }; onClose: () => void }) {
   const t = useT();
   const lang = useLang();
@@ -71,7 +71,7 @@ export function ReportDialog({ entry, onClose }: { entry: { id: string; title: s
   const [email, setEmail] = useState('');
   const [goodFaith, setGoodFaith] = useState(false);
   const [sending, setSending] = useState(false);
-  const [decision, setDecision] = useState<Decision | null>(null);
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const emailOk = !email.trim() || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
   const complete = reason.trim().length >= 10 && goodFaith && emailOk;
@@ -80,7 +80,8 @@ export function ReportDialog({ entry, onClose }: { entry: { id: string; title: s
     setSending(true);
     setError(null);
     try {
-      setDecision(await reportGalleryItem(entry.id, { reason: reason.trim(), name: name.trim(), email: email.trim(), goodFaith: true }));
+      await reportGalleryItem(entry.id, { reason: reason.trim(), name: name.trim(), email: email.trim(), goodFaith: true });
+      setSent(true);
     } catch (e) {
       const message = (e as Error).message;
       setError(message === 'limit' ? t('reportLimit') : message);
@@ -89,24 +90,16 @@ export function ReportDialog({ entry, onClose }: { entry: { id: string; title: s
     }
   };
 
-  const outcome =
-    decision &&
-    (decision.status === 'removed'
-      ? t('reportRemoved', { reason: decision.reason ?? '' })
-      : decision.status === 'approved'
-        ? t('reportKept', { reason: decision.reason ?? '' })
-        : t('reportPending'));
-
   return (
     <div className="dialog-backdrop" role="presentation" onClick={onClose}>
       <div className="dialog" role="dialog" aria-modal="true" aria-label={t('reportTitle')} onClick={(e) => e.stopPropagation()}>
         <h3>{t('reportTitle')}</h3>
-        {decision ? (
+        {sent ? (
           <>
-            <p className={decision.status === 'removed' ? 'good' : undefined}>{outcome}</p>
+            <p className="good">{t('reportPending')}</p>
             <p className="hint">
               {email.trim() && `${t('reportMailed')} `}
-              {t('reportDisagree')} <a href={`mailto:${CONTACT_MAIL}`}>{CONTACT_MAIL}</a>
+              {t('reportQuestions')} <a href={`mailto:${CONTACT_MAIL}`}>{CONTACT_MAIL}</a>
             </p>
           </>
         ) : (
@@ -142,13 +135,13 @@ export function ReportDialog({ entry, onClose }: { entry: { id: string; title: s
           </>
         )}
         <div className="row-actions">
-          {!decision && (
+          {!sent && (
             <button type="button" className="primary" disabled={!complete || sending} onClick={() => void send()}>
-              {sending ? t('publishChecking') : t('reportSend')}
+              {t('reportSend')}
             </button>
           )}
           <button type="button" className="ghost" onClick={onClose}>
-            {decision ? t('close') : t('cancel')}
+            {sent ? t('close') : t('cancel')}
           </button>
         </div>
       </div>

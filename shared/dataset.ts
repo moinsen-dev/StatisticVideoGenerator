@@ -77,11 +77,14 @@ export type Series = Dataset['series'][number];
 export type StoryEvent = Dataset['events'][number];
 export type MusicSpec = Dataset['music'];
 
-export function datasetJsonSchema(): Record<string, unknown> {
-  const schema = z.toJSONSchema(DatasetSchema) as Record<string, unknown>;
-  delete schema.$schema;
-  return schema;
+/** JSON schema of a zod schema, without the $schema key (the claude CLI and the APIs take it as is). */
+export function jsonSchema(schema: z.ZodType): Record<string, unknown> {
+  const out = z.toJSONSchema(schema) as Record<string, unknown>;
+  delete out.$schema;
+  return out;
 }
+
+export const datasetJsonSchema = () => jsonSchema(DatasetSchema);
 
 type Schema = Record<string, unknown>;
 
@@ -107,10 +110,10 @@ function toStrict(node: unknown): unknown {
   return out;
 }
 
-/** The dataset schema in the strict form that strict tools and strict JSON-schema outputs require. */
-export function strictDatasetJsonSchema(): Record<string, unknown> {
-  return toStrict(datasetJsonSchema()) as Record<string, unknown>;
-}
+/** A schema in the strict form that strict tools and strict JSON-schema outputs require. */
+export const strictJsonSchema = (schema: z.ZodType) => toStrict(jsonSchema(schema)) as Record<string, unknown>;
+
+export const strictDatasetJsonSchema = () => strictJsonSchema(DatasetSchema);
 
 // ---------------------------------------------------------------------------
 // Normalisation: models return almost-right data; the renderer needs exactly-right data.

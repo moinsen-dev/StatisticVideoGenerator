@@ -3,14 +3,14 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
-import { ResearchRequestSchema, type ServerStatus } from '../shared/dataset.ts';
+import { parseDataset, ResearchRequestSchema, type ServerStatus } from '../shared/dataset.ts';
 import { composeMusic, HttpError } from './elevenlabs.ts';
 import { claudeStatus, runResearch } from './research.ts';
 import { codexStatus, runCodexResearch } from './research-codex.ts';
 import { galleryApi } from './gallery.ts';
 import { sqliteSql } from './gallery-sqlite.ts';
 import { consoleMailer } from './mail.ts';
-import { claudeCliModerator } from './moderation-cli.ts';
+import { reviewWithClaude, reviewWithCodex } from './review-cli.ts';
 
 try {
   process.loadEnvFile();
@@ -51,13 +51,26 @@ app.post('/api/research', async (c) => {
   });
 });
 
+// Gallery review with a local CLI (providers claude-code and codex): the submitter's own AI, like a
+// key or a local model in the browser (src/lib/review.ts).
+const ReviewRequest = z.object({ cli: z.enum(['claude', 'codex']), topic: z.string().trim().min(3).max(600), dataset: z.unknown() });
+
+app.post('/api/review', async (c) => {
+  const parsed = ReviewRequest.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ message: 'Ungültige Anfrage.' }, 400);
+  try {
+    const input = { dataset: parseDataset(parsed.data.dataset), topic: parsed.data.topic };
+    return c.json(await (parsed.data.cli === 'codex' ? reviewWithCodex : reviewWithClaude)(input));
+  } catch (err) {
+    return c.json({ message: (err as Error).message }, 502);
+  }
+});
+
 // Public gallery, locally in a SQLite file. The server only listens on 127.0.0.1, so without an
-// ADMIN_TOKEN in .env the oversight page accepts the token "local". Locally the signed-in claude CLI
-// reviews and mails only go to the console, whatever keys the environment holds; the hosted gallery
-// (functions/) uses the API and Resend.
+// ADMIN_TOKEN in .env the oversight page accepts the token "local". Mails only go to the console,
+// whatever keys the environment holds; the hosted gallery (functions/) sends them through Resend.
 const gallery = {
   sql: sqliteSql('.data/gallery.sqlite'),
-  moderate: claudeCliModerator(),
   mail: consoleMailer,
   adminToken: process.env.ADMIN_TOKEN ?? 'local',
   salt: process.env.RATE_SALT ?? 'local',

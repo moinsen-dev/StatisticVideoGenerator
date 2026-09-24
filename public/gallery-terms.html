@@ -83,21 +83,23 @@
 
     <h2>5. Prüfung</h2>
     <ul>
-      <li>moinsen hat kein Moderationsteam. Jede Einreichung prüft ein KI-Modell (derzeit Claude Sonnet von Anthropic)
-        automatisch anhand dieser Regeln und entscheidet sofort, ob sie erscheint. Vorher liest kein Mensch mit.</li>
+      <li>moinsen prüft Einträge nicht vorab und betreibt dafür keine eigene KI. Vor dem Einreichen prüft die KI, die du
+        in StatRace eingerichtet hast (dein API-Schlüssel, dein lokales Modell oder dein eigenes Abo), den Eintrag anhand
+        dieser Regeln. Nur was sie freigibt, reicht StatRace ein; der Eintrag ist dann sofort öffentlich.</li>
       <li>Das Modell sieht Thema, Titel, Untertitel, Einheit, Zeitraum, die Namen der Balken, alle Ereignistexte, die
-        Quellen, Hinweise und die Musikbeschreibung. Wer einreicht, sieht es nicht. Im Zweifel lehnt es ab. Die Richtigkeit
-        jeder einzelnen Zahl prüft es nicht.</li>
-      <li>Zusätzlich lehnt StatRace fest ab: Quellen hinter Bezahlschranken, Links, die nicht mit http oder https beginnen,
-        und Datensätze, die nicht dem Format entsprechen.</li>
+        Quellen, Hinweise und die Musikbeschreibung. Im Zweifel lehnt es ab. Es prüft Regelverstöße, nicht die
+        Richtigkeit jeder einzelnen Zahl.</li>
+      <li>Zusätzlich lehnt der Server fest ab: Quellen hinter Bezahlschranken, Links, die nicht mit http oder https
+        beginnen, und Datensätze, die nicht dem Format entsprechen.</li>
       <li>Schon die Recherche in StatRace folgt denselben Regeln: Themen, die gegen sie verstoßen, recherchiert das Modell
         nicht.</li>
-      <li>Bei einer Ablehnung siehst du den Grund im Studio. Abgelehnte und entfernte Einträge werden nach 30 Tagen
-        gelöscht.</li>
-      <li>moinsen kann Entscheidungen überprüfen und ändern, also Einträge entfernen oder freigeben.</li>
-      <li>Veröffentlichte Einträge tragen den Hinweis „KI-recherchiert · automatisch geprüft“ und „Angaben ohne Gewähr“.</li>
-      <li>Nicht einverstanden mit einer Entscheidung? Schreib an <a href="mailto:business@moinsen.dev">business@moinsen.dev</a>;
-        dann sieht sich ein Mensch den Fall an. Der Rechtsweg bleibt offen.</li>
+      <li>Die Prüfung läuft bei dir und deinem KI-Anbieter. moinsen kann nicht sicherstellen, dass jeder Eintrag sie
+        durchlaufen hat. Deshalb kann jede Person Einträge melden (Abschnitt 6).</li>
+      <li>moinsen kann Einträge jederzeit entfernen oder wieder freigeben. Bei einer Entfernung siehst du den Grund im
+        Studio. Entfernte Einträge werden nach 30 Tagen gelöscht.</li>
+      <li>Veröffentlichte Einträge tragen den Hinweis „KI-recherchiert · ohne Gewähr“.</li>
+      <li>Nicht einverstanden mit einer Entfernung? Schreib an <a href="mailto:business@moinsen.dev">business@moinsen.dev</a>.
+        Der Rechtsweg bleibt offen.</li>
     </ul>
 
     <h2>6. Einträge melden</h2>
@@ -105,13 +107,9 @@
       <li>Jeder Eintrag hat den Knopf „Melden“. Eine Meldung enthält eine Begründung, die Fundstelle (wird automatisch
         eingetragen), freiwillig Name und E-Mail-Adresse und die Erklärung, dass die Angaben nach bestem Wissen richtig und
         vollständig sind. Höchstens 20 Meldungen am Tag je Anschluss.</li>
-      <li>Der gemeldete Eintrag wird sofort ausgeblendet. Das KI-Modell prüft ihn mit deiner Begründung erneut und
-        entscheidet sofort: Er wird entfernt, oder er erscheint wieder, wenn er nicht gegen die Regeln verstößt. Die
-        Entscheidung siehst du direkt nach dem Melden.</li>
-      <li>Mit E-Mail-Adresse bekommst du Eingangsbestätigung und Entscheidung mit Begründung auch per E-Mail, mit dem
-        Hinweis, dass die Entscheidung automatisiert getroffen wurde. Eine Kopie ohne deinen Namen und ohne deine
-        E-Mail-Adresse geht an moinsen.</li>
-      <li>Fällt die automatische Prüfung aus, bleibt der Eintrag ausgeblendet, bis moinsen entschieden hat.</li>
+      <li>Der gemeldete Eintrag wird sofort ausgeblendet. Ein Mensch bei moinsen prüft die Meldung so bald wie möglich und
+        entscheidet, ob der Eintrag entfernt wird oder wieder erscheint. Über Meldungen entscheidet keine Automatik.</li>
+      <li>Mit E-Mail-Adresse bekommst du eine Eingangsbestätigung und später die Entscheidung mit Begründung.</li>
       <li>Widerspruch per Antwort auf die E-Mail oder an <a href="mailto:business@moinsen.dev">business@moinsen.dev</a>.
         Der Rechtsweg bleibt offen.</li>
     </ul>
@@ -126,9 +124,9 @@
     </ul>
 
     <h2>8. KI und Gewähr</h2>
-    <p>Die Datensätze entstehen mit Hilfe von KI-Modellen (Claude, GPT oder lokale Modelle). Ein weiteres KI-Modell prüft
-      sie auf diese Regeln, nicht jede Zahl auf Richtigkeit. Viele Werte sind Schätzungen oder interpoliert. Alle Angaben
-      erfolgen ohne Gewähr; maßgeblich sind die verlinkten Quellen.</p>
+    <p>Die Datensätze entstehen mit Hilfe von KI-Modellen (Claude, GPT oder lokale Modelle), die die Einreichenden selbst
+      wählen. Die Prüfung vor dem Einreichen betrifft diese Regeln, nicht jede Zahl. Viele Werte sind Schätzungen oder
+      interpoliert. Alle Angaben erfolgen ohne Gewähr; maßgeblich sind die verlinkten Quellen.</p>
 
     <h2>9. Kontaktstelle (Art. 11 und 12 Digital Services Act)</h2>
     <p class="box">E-Mail: <a href="mailto:business@moinsen.dev">business@moinsen.dev</a><br>
@@ -183,20 +181,22 @@
 
     <h2>5. Review</h2>
     <ul>
-      <li>moinsen has no moderation team. An AI model (currently Claude Sonnet by Anthropic) reviews every submission
-        against these rules and decides at once whether it appears. No person reads it beforehand.</li>
+      <li>moinsen does not review entries beforehand and runs no AI of its own for it. Before you submit, the AI you set up
+        in StatRace (your API key, your local model or your own subscription) reviews the entry against these rules. StatRace
+        only submits what it approves; the entry is then public at once.</li>
       <li>The model sees the topic, title, subtitle, unit, time span, the names of the bars, all event texts, the sources,
-        notes and the music description. It does not see who submitted. When in doubt, it rejects. It does not check every
-        single number for accuracy.</li>
-      <li>In addition, StatRace always rejects sources behind paywalls, links that do not start with http or https, and
+        notes and the music description. When in doubt, it rejects. It checks for rule violations, not every single number
+        for accuracy.</li>
+      <li>In addition, the server always rejects sources behind paywalls, links that do not start with http or https, and
         datasets that do not match the format.</li>
       <li>The research in StatRace already follows the same rules: the model does not research topics that break them.</li>
-      <li>If your submission is rejected, you see the reason in the studio. Rejected and removed entries are deleted after
-        30 days.</li>
-      <li>moinsen can review and change decisions, that is remove or restore entries.</li>
-      <li>Published entries carry the notes “AI-researched · reviewed automatically” and “no guarantee of accuracy”.</li>
-      <li>Disagree with a decision? Write to <a href="mailto:business@moinsen.dev">business@moinsen.dev</a> and a person
-        will look at the case. You may also seek judicial redress.</li>
+      <li>The review runs with you and your AI provider, so moinsen cannot make sure that every entry went through it. That
+        is why anyone can report entries (section 6).</li>
+      <li>moinsen can remove or restore entries at any time. If your entry is removed, you see the reason in the studio.
+        Removed entries are deleted after 30 days.</li>
+      <li>Published entries carry the note “AI-researched · no guarantee”.</li>
+      <li>Disagree with a removal? Write to <a href="mailto:business@moinsen.dev">business@moinsen.dev</a>. You may also
+        seek judicial redress.</li>
     </ul>
 
     <h2>6. Reporting entries</h2>
@@ -204,11 +204,9 @@
       <li>Every entry has a “Report” button. A report contains a reason, the location (filled in automatically), optionally
         your name and email address, and a statement that the information is accurate and complete to the best of your
         knowledge. At most 20 reports a day per connection.</li>
-      <li>The reported entry is hidden at once. The AI model reviews it again with your reason and decides right away: it is
-        removed, or it reappears if it does not break the rules. You see the decision right after reporting.</li>
-      <li>If you leave an email address, you also get the confirmation and the decision with its reason by email, including
-        the note that the decision was automated. A copy without your name and email address goes to moinsen.</li>
-      <li>If the automatic review fails, the entry stays hidden until moinsen has decided.</li>
+      <li>The reported entry is hidden at once. A person at moinsen reviews the report as soon as possible and decides
+        whether the entry is removed or reappears. No automated means decide on reports.</li>
+      <li>If you leave an email address, you get a confirmation and later the decision with its reason.</li>
       <li>To disagree, reply to the email or write to <a href="mailto:business@moinsen.dev">business@moinsen.dev</a>. You
         may also seek judicial redress.</li>
     </ul>
@@ -223,9 +221,9 @@
     </ul>
 
     <h2>8. AI and accuracy</h2>
-    <p>The datasets are made with the help of AI models (Claude, GPT or local models). Another AI model checks them against
-      these rules, not every number for accuracy. Many values are estimates or interpolated. No guarantee of accuracy; the
-      linked sources are authoritative.</p>
+    <p>The datasets are made with the help of AI models (Claude, GPT or local models) that the submitters choose themselves.
+      The review before submitting covers these rules, not every number. Many values are estimates or interpolated. No
+      guarantee of accuracy; the linked sources are authoritative.</p>
 
     <h2>9. Point of contact (Art. 11 and 12 Digital Services Act)</h2>
     <p class="box">Email: <a href="mailto:business@moinsen.dev">business@moinsen.dev</a><br>

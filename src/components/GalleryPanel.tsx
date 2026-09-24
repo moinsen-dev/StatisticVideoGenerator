@@ -1,36 +1,55 @@
 import { useEffect, useState } from 'react';
+import type { ServerStatus } from '../../shared/dataset.ts';
+import { getStatus } from '../lib/api.ts';
 import { GALLERY_LICENSE, galleryStatus, paywalledSources, submitToGallery, withdrawFromGallery, type GalleryStatus } from '../lib/gallery.ts';
 import { useLang, useT } from '../lib/i18n.ts';
 import { CONTACT_MAIL, termsUrl } from '../lib/links.ts';
 import type { Project } from '../lib/project.ts';
+import { reviewEntry, reviewerLabel, reviewProvider } from '../lib/review.ts';
 
-/** Studio tab: submit this project to the public gallery, see the automatic decision, withdraw it. */
+/** Studio tab: the submitter's own AI reviews the project against the gallery rules; if it passes, the
+ *  project goes into the public gallery at once. Shows its state and lets the submitter withdraw it. */
 export function GalleryPanel(props: { project: Project; update: (fn: (p: Project) => Project) => void }) {
   const t = useT();
   const lang = useLang();
   const sub = props.project.gallery ?? null;
   const [status, setStatus] = useState<GalleryStatus | undefined>(undefined);
+  const [server, setServer] = useState<ServerStatus | null | undefined>(undefined);
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [rejected, setRejected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getStatus().then(setServer);
+  }, []);
 
   useEffect(() => {
     setStatus(undefined);
     if (sub) void galleryStatus(sub).then(setStatus, (e: Error) => setError(e.message));
   }, [sub]);
 
+  const reviewer = server === undefined ? null : reviewProvider(server);
+
   const submit = async () => {
+    if (!reviewer) return;
     setBusy(true);
     setError(null);
+    setRejected(null);
     try {
+      const review = await reviewEntry(reviewer, { dataset: props.project.dataset, topic: props.project.topic });
+      if (!review.verdict.allowed) {
+        setRejected(review.verdict.reason);
+        return;
+      }
       // A new version replaces the old entry: withdraw first, then submit the current state.
       if (sub) await withdrawFromGallery(sub).catch(() => undefined);
-      const next = await submitToGallery(props.project);
+      const next = await submitToGallery(props.project, review.model);
       props.update((p) => ({ ...p, gallery: next }));
       setAccepted(false);
     } catch (e) {
       const message = (e as Error).message;
-      setError(message === 'limit' ? t('publishLimit') : message === 'review unavailable' ? t('publishUnavailable') : message);
+      setError(message === 'limit' ? t('publishLimit') : message);
     } finally {
       setBusy(false);
     }
@@ -49,8 +68,6 @@ export function GalleryPanel(props: { project: Project; update: (fn: (p: Project
   };
 
   const paywalled = paywalledSources(props.project.dataset);
-  const reason = status?.reason || t('noReason');
-  const refused = status?.status === 'rejected' || status?.status === 'removed';
 
   return (
     <div className="stack">
@@ -86,15 +103,13 @@ export function GalleryPanel(props: { project: Project; update: (fn: (p: Project
               ? t('publishApproved')
               : status.status === 'reported'
                 ? t('publishReported')
-                : status.status === 'rejected'
-                  ? t('publishRejected', { reason })
-                  : t('publishRemoved', { reason })}{' '}
+                : t('publishRemoved', { reason: status.reason || t('noReason') })}{' '}
           {status?.status === 'approved' && (
             <a href={`/app#g=${sub.id}`} target="_blank" rel="noreferrer">
               {t('publishOpen')} ↗
             </a>
           )}
-          {refused && (
+          {status?.status === 'removed' && (
             <>
               <br />
               {t('publishContact')} <a href={`mailto:${CONTACT_MAIL}`}>{CONTACT_MAIL}</a>
@@ -103,12 +118,23 @@ export function GalleryPanel(props: { project: Project; update: (fn: (p: Project
         </p>
       )}
 
+      {server !== undefined && (
+        <p className="hint">
+          {reviewer ? t('publishReviewer', { ai: reviewerLabel(reviewer) }) : t('publishNeedsAi')}{' '}
+          <a href="#settings">{t('settings')}</a>
+        </p>
+      )}
       <label className="check">
         <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
         {t('publishAccept')}
       </label>
       <div className="row-actions">
-        <button type="button" className="primary" disabled={!accepted || busy || paywalled.length > 0} onClick={() => void submit()}>
+        <button
+          type="button"
+          className="primary"
+          disabled={!accepted || busy || !reviewer || paywalled.length > 0}
+          onClick={() => void submit()}
+        >
           {busy ? t('publishChecking') : sub && status !== null ? t('publishResubmit') : t('publishSubmit')}
         </button>
         {sub && status !== null && (
@@ -117,6 +143,7 @@ export function GalleryPanel(props: { project: Project; update: (fn: (p: Project
           </button>
         )}
       </div>
+      {rejected && <p className="error">{t('publishRejected', { reason: rejected })}</p>}
       {error && <p className="error">{error}</p>}
     </div>
   );
