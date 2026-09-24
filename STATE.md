@@ -1,38 +1,48 @@
 # STATE — StatRace
 
-> **Frozen:** 2026-09-23 13:58
+> **Frozen:** 2026-09-24 12:20
 > **Branch:** `main` · public: https://github.com/moinsen-dev/StatisticVideoGenerator (MIT)
 > **Live:** https://statrace.moinsen.dev (Cloudflare Pages, project `statrace`, static, BYOK): landing page at `/`, studio at `/app`, local models included (Codex only locally).
-> **Last commit:** „feat: Recherche ohne API-Key – lokales Modell (Ollama, LM Studio) und Codex“ (a168a43, pushed, CI green) + hint fix for the hosted page
+> **Last commit:** „feat: öffentliche Galerie mit Vorab-Moderation und DSA-Meldeweg“ (local, not pushed: the legal drafts go public only after Uli's review)
 > **Dirty:** clean · the local-only branch `idea-loop/monetarisierung` is deliberately not on GitHub
 
 ## Last work-unit
 
-Research without an API key (2026-09-23, ~47 min, of which ~25 min waiting for local model runs):
+Public gallery (2026-09-24, ~45 min, including an 18-min legal review in the background):
 
-- **Codex CLI as a second subscription provider** (ChatGPT plan, local server only).
-  - Runs `codex --search exec` with `--output-schema` and `--ignore-user-config`.
-  - Real run, „Meistabonnierte YouTube-Kanäle“: 2:34 min, 4 searches, 18 channels 2010–2025.
-- **Local model through Ollama, LM Studio or any OpenAI-compatible server**, also usable on the hosted site.
-  - It researches open data through tools that run in the browser: OWID and Wikipedia.
-  - The app fills OWID values in exactly, from the full table, so the model only references entities instead of copying numbers.
-  - Measured with Qwen 3.8 27B MLX (CO₂ by country): 7:29 → **4:22 min**. 19 countries × 35 years, exact values, sources linked.
-  - Qwen 3.5 4B: 92 s, but it read no source and got numbers wrong. Such datasets are now marked „nicht recherchiert“.
-- **UI:**
-  - Provider dropdown on the home screen.
-  - Settings with connection check: server down vs. `OLLAMA_ORIGINS` missing.
-  - Landing page: local model card („kostenlos“) and FAQ „Geht das ganz ohne API-Key?“.
-- **Gemini CLI left out:** same grounding terms as the Gemini API.
+- **Legal review against primary sources** (DSA, DDG, AI Act Art. 50, UrhG, GDPR, provider terms, Google),
+  53 citations. Result: **okay under conditions**.
+  - File: `docs/research/2026-09-24-oeffentliche-galerie-rechtslage.md`, index in `RESEARCH.md`.
+- **Gallery built and tested locally**, on SQLite and as a Pages Function with a local D1:
+  - Submit from the studio tab „Galerie“: dataset JSON only, CC BY-SA 4.0, Statista/paywall sources blocked, 5 per day.
+  - Moderation at `/app#moderate`: approve, reject or remove with a reason.
+  - Reporting after DSA Art. 16(2): prepared mails for receipt and decision; notifier data is deleted afterwards.
+  - Submitters can withdraw their entry, which deletes it.
+  - Gallery on the landing page and the home screen: label „KI-recherchiert · von moinsen geprüft“, disclaimer,
+    imprint and privacy links.
+- **Draft texts for Uli** in `docs/legal/`: gallery terms (Art. 14, with the contact point) and a privacy policy addition.
+
+Before that, 2026-09-23: research without an API key (local models via Ollama, Codex), landing page, OpenAI, OSS release.
 
 ## Next intended step
 
-1. Uli uses a local model once on the hosted site:
-   - Run `launchctl setenv OLLAMA_ORIGINS "https://statrace.moinsen.dev"` and restart Ollama.
-   - Allow Chrome's prompt for access to apps on the device.
-   - So far only tested from localhost. The Browser pane blocks localhost from public pages without asking.
-2. Still open: a run with a real Anthropic key and a real OpenAI key.
+1. Uli reviews the drafts in `docs/legal/` and:
+   - provides the contact email for the DSA contact point (`[E-MAIL]`);
+   - adds the privacy section on moinsen.dev.
+2. Go-live, after Uli's go:
+   - `npx wrangler d1 create statrace-gallery`;
+   - `wrangler.toml` with `pages_build_output_dir = "dist"` and D1 binding `DB`;
+   - Uli sets `ADMIN_TOKEN` (`npx wrangler pages secret put ADMIN_TOKEN --project-name statrace`) and `RATE_SALT`;
+   - publish the terms in the app;
+   - deploy.
+3. Still open: a hosted local-model run with `OLLAMA_ORIGINS`, and runs with real Anthropic and OpenAI keys.
 
 ## Open friction
+
+- **Gallery moderation costs time:** each entry needs a real content review (the AI Act exception only applies
+  then), about 2–5 min per entry.
+  - Confirmation mails go out manually through mailto links; automating them with Resend would need a key.
+  - No captcha yet: many IPs could flood the queue. Add Cloudflare Turnstile if that happens.
 
 - **Local speed:** on an M4 Pro, prompt processing runs at ~100 tokens/s and output at ~25 tokens/s.
   - Wikipedia tables are expensive, because Qwen reads every digit as a token.
@@ -46,7 +56,8 @@ Research without an API key (2026-09-23, ~47 min, of which ~25 min waiting for l
 ## Live context for the agent
 
 - **Hot files:**
-  - `src/lib/research-local.ts`, `src/lib/open-data.ts`, `server/research-codex.ts`, `src/lib/providers.ts`
+  - `server/gallery.ts`, `src/lib/gallery.ts`, `src/components/GalleryPanel.tsx`, `Moderation.tsx`, `docs/legal/`
+  - `src/lib/research-local.ts`, `src/lib/providers.ts`
 - **Deploy:** `npm run build && npx wrangler pages deploy dist --project-name statrace --branch main --commit-dirty=true`
 - **Test a local model:**
   - In the Browser pane: `/app`, choose „Lokales Modell“ as the research AI, then check the Ollama log in `~/.ollama/logs/server.log`.

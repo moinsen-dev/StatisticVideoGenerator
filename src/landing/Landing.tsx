@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Brand } from '../components/Brand.tsx';
+import { GalleryList } from '../components/GalleryList.tsx';
 import { LangSwitch } from '../components/LangSwitch.tsx';
 import { listExamples, type Example } from '../lib/examples.ts';
 import { useLang, useT, type MessageKey } from '../lib/i18n.ts';
@@ -161,6 +162,8 @@ export function Landing() {
             ))}
           </ul>
         </section>
+
+        <GalleryList heading="h2" className="l-wrap l-section" />
 
         <section className="l-wrap l-section">
           <h2>{t('lAiTitle')}</h2>

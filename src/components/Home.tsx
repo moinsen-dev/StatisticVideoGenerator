@@ -3,12 +3,13 @@ import { parseDataset, type ResearchRequest, type ServerStatus } from '../../sha
 import { getStatus } from '../lib/api.ts';
 import { exampleProject, listExamples, type Example } from '../lib/examples.ts';
 import { useLang, useT } from '../lib/i18n.ts';
-import { REPO_URL } from '../lib/links.ts';
+import { moinsenUrl, REPO_URL } from '../lib/links.ts';
 import { newProject, type Project } from '../lib/project.ts';
 import { getLocalConfig } from '../lib/local-model.ts';
 import { availableProviders, defaultProvider, isReady, modelLabel, PROVIDERS, saveProvider, type ProviderId } from '../lib/providers.ts';
 import { deleteProject, listProjects, type ProjectMeta } from '../lib/store.ts';
 import { Brand } from './Brand.tsx';
+import { GalleryList } from './GalleryList.tsx';
 import { LangSwitch } from './LangSwitch.tsx';
 import { LocalModelSetup } from './LocalModelSetup.tsx';
 import { ProviderKeyField, providerTitle } from './Settings.tsx';
@@ -227,6 +228,8 @@ export function Home(props: {
           </section>
         )}
 
+        <GalleryList heading="h2" />
+
         <section className="projects">
           <div className="projects-head">
             <h2>{t('yourVideos')}</h2>
@@ -289,6 +292,14 @@ export function Home(props: {
         <span>·</span>
         <a href="https://moinsen.dev" target="_blank" rel="noreferrer">
           moinsen.dev
+        </a>
+        <span>·</span>
+        <a href={moinsenUrl(lang, 'impressum')} target="_blank" rel="noreferrer">
+          {t('lImprint')}
+        </a>
+        <span>·</span>
+        <a href={moinsenUrl(lang, 'privacy')} target="_blank" rel="noreferrer">
+          {t('privacy')}
         </a>
       </footer>
     </div>

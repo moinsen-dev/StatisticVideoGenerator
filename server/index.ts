@@ -7,6 +7,8 @@ import { ResearchRequestSchema, type ServerStatus } from '../shared/dataset.ts';
 import { composeMusic, HttpError } from './elevenlabs.ts';
 import { claudeStatus, runResearch } from './research.ts';
 import { codexStatus, runCodexResearch } from './research-codex.ts';
+import { galleryApi } from './gallery.ts';
+import { sqliteSql } from './gallery-sqlite.ts';
 
 try {
   process.loadEnvFile();
@@ -46,6 +48,14 @@ app.post('/api/research', async (c) => {
     }
   });
 });
+
+// Public gallery, locally in a SQLite file. The server only listens on 127.0.0.1, so without an
+// ADMIN_TOKEN in .env the moderation page accepts the token "local".
+const gallerySql = sqliteSql('.data/gallery.sqlite');
+app.route(
+  '/',
+  galleryApi(() => ({ sql: gallerySql, adminToken: process.env.ADMIN_TOKEN ?? 'local', salt: process.env.RATE_SALT ?? 'local' })),
+);
 
 const MusicRequest = z.object({
   prompt: z.string().trim().min(3).max(2000),

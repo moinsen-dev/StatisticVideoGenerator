@@ -1,5 +1,6 @@
 import type { Dataset, ResearchMeta } from '../../shared/dataset.ts';
 import type { MusicSource } from '../audio/soundtrack.ts';
+import type { Submission } from './gallery.ts';
 import { defaultDuration } from '../engine/model.ts';
 import type { Format } from '../engine/renderer.ts';
 
@@ -24,6 +25,10 @@ export type Project = {
   research: ResearchMeta | null;
   /** display names of stored audio files, keyed by source */
   audio: { ai: string | null; upload: string | null };
+  /** this project's entry in the public gallery; the token lets its owner check or withdraw it */
+  gallery?: Submission | null;
+  /** id of the gallery entry this project was opened from */
+  fromGallery?: string | null;
 };
 
 export function newProject(topic: string, dataset: Dataset, research: ResearchMeta | null, bars: number): Project {

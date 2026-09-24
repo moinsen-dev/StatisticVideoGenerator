@@ -4,21 +4,26 @@ import { audioPlan, buildSoundtrack } from '../audio/soundtrack.ts';
 import { Transport } from '../audio/transport.ts';
 import { buildModel } from '../engine/model.ts';
 import { FRAME, Renderer } from '../engine/renderer.ts';
-import { useT } from '../lib/i18n.ts';
+import { GALLERY_LICENSE, listGallery } from '../lib/gallery.ts';
+import { moinsenUrl } from '../lib/links.ts';
+import { useLang, useT } from '../lib/i18n.ts';
 import { fileSlug, type Project, type VideoSettings } from '../lib/project.ts';
 import { loadAudio, saveProject } from '../lib/store.ts';
 import { DataPanel } from './DataPanel.tsx';
 import { LangSwitch } from './LangSwitch.tsx';
 import { ExportPanel } from './ExportPanel.tsx';
+import { ReportDialog } from './GalleryList.tsx';
+import { GalleryPanel } from './GalleryPanel.tsx';
 import { MusicPanel } from './MusicPanel.tsx';
 
-type Tab = 'video' | 'data' | 'music' | 'export';
+type Tab = 'video' | 'data' | 'music' | 'export' | 'gallery';
 const TABS = [
   ['video', 'tabVideo'],
   ['data', 'tabData'],
   ['music', 'tabMusic'],
   ['export', 'tabExport'],
 ] as const;
+const GALLERY_TAB = ['gallery', 'tabGallery'] as const;
 
 export type AudioState = { buffer: AudioBuffer | null; status: 'working' | 'ready' | 'error'; message: string | null };
 
@@ -28,6 +33,11 @@ export function Studio({ initial, onClose }: { initial: Project; onClose: () => 
   const t = useT();
   const [project, setProject] = useState(initial);
   const [tab, setTab] = useState<Tab>('video');
+  // The gallery tab only appears where the gallery API runs (local server, or the hosted site with D1).
+  const [galleryOn, setGalleryOn] = useState(false);
+  useEffect(() => {
+    void listGallery().then((entries) => setGalleryOn(entries !== null));
+  }, []);
   const update = useCallback(
     (fn: (p: Project) => Project) => setProject((p) => ({ ...fn(p), updatedAt: Date.now() })),
     [],
@@ -255,7 +265,7 @@ export function Studio({ initial, onClose }: { initial: Project; onClose: () => 
 
         <aside className="panel">
           <nav className="tabs" role="tablist">
-            {TABS.map(([id, labelKey]) => (
+            {(galleryOn ? [...TABS, GALLERY_TAB] : TABS).map(([id, labelKey]) => (
               <button
                 type="button"
                 key={id}
@@ -284,6 +294,7 @@ export function Studio({ initial, onClose }: { initial: Project; onClose: () => 
                 onAudioChanged={() => setAudioVersion((v) => v + 1)}
               />
             )}
+            {tab === 'gallery' && <GalleryPanel project={project} update={update} />}
             {tab === 'export' && (
               <ExportPanel
                 project={project}
@@ -306,9 +317,34 @@ function VideoPanel(props: {
   maxBars: number;
 }) {
   const t = useT();
-  const { settings, research } = props.project;
+  const lang = useLang();
+  const [reporting, setReporting] = useState(false);
+  const { settings, research, fromGallery } = props.project;
   return (
     <div className="stack">
+      {fromGallery && (
+        <p className="hint gallery-origin">
+          {t('galleryFrom')}{' '}
+          <a href={GALLERY_LICENSE.url} target="_blank" rel="noreferrer">
+            {GALLERY_LICENSE.name}
+          </a>{' '}
+          ·{' '}
+          <button type="button" className="link" onClick={() => setReporting(true)}>
+            {t('galleryReport')}
+          </button>{' '}
+          ·{' '}
+          <a href={moinsenUrl(lang, 'impressum')} target="_blank" rel="noreferrer">
+            {t('lImprint')}
+          </a>{' '}
+          ·{' '}
+          <a href={moinsenUrl(lang, 'privacy')} target="_blank" rel="noreferrer">
+            {t('privacy')}
+          </a>
+        </p>
+      )}
+      {fromGallery && reporting && (
+        <ReportDialog entry={{ id: fromGallery, title: props.project.dataset.title }} onClose={() => setReporting(false)} />
+      )}
       <div className="field">
         <span className="label">{t('format')}</span>
         <div className="seg">

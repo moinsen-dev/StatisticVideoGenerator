@@ -1259,3 +1259,91 @@ a.example {
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------- gallery, reports, moderation */
+
+.gallery li {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.ai-label {
+  font-size: 0.75rem !important;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--accent) !important;
+}
+
+.report-link {
+  justify-self: end;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.rules summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.rules ul {
+  margin: 0.6rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.publish-state {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.publish-state.approved {
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+.publish-state.rejected,
+.publish-state.removed {
+  border-color: rgba(251, 113, 133, 0.45);
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(4, 6, 14, 0.72);
+}
+
+.dialog {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.3rem;
+  border-radius: 18px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-raised);
+  text-align: left;
+}
+
+.moderation-token {
+  margin-top: 1.2rem;
+  max-width: 520px;
+}
+
+.gallery-origin {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(142, 166, 255, 0.3);
+  background: rgba(142, 166, 255, 0.06);
+}
