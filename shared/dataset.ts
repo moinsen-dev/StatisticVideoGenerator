@@ -65,6 +65,11 @@ export const DatasetSchema = z.object({
   sources: z.array(z.object({ title: z.string(), url: z.string() })),
   notes: z.string().describe('definitions and caveats: which values are estimated or interpolated'),
   music: MusicSchema,
+  refusal: z
+    .string()
+    .nullable()
+    .default(null)
+    .describe('null for an allowed topic; otherwise one sentence in the output language naming the content rule the topic breaks'),
 });
 
 export type Dataset = z.infer<typeof DatasetSchema>;
@@ -86,7 +91,8 @@ function toStrict(node: unknown): unknown {
   if (!node || typeof node !== 'object') return node;
   const src = node as Schema;
   const out: Schema = {};
-  for (const [k, v] of Object.entries(src)) out[k] = toStrict(v);
+  // Strict modes reject "default"; the field stays required and the model writes null.
+  for (const [k, v] of Object.entries(src)) if (k !== 'default') out[k] = toStrict(v);
   if (Array.isArray(src.type)) {
     const { type, description, ...rest } = out;
     return {
@@ -196,6 +202,8 @@ export function parseDataset(json: unknown): Dataset {
     const issue = result.error.issues[0];
     throw new Error(`Ungültiger Datensatz: ${issue.path.join('.') || '(root)'} – ${issue.message}`);
   }
+  // The research declined the topic under the content rules (shared/prompt.ts).
+  if (result.data.refusal?.trim()) throw new Error(result.data.refusal.trim());
   return normalizeDataset(result.data);
 }
 

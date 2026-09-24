@@ -1,4 +1,5 @@
 import type { Dataset } from '../../shared/dataset.ts';
+export { GALLERY_LICENSE, paywalledSources } from '../../shared/gallery.ts';
 import type { Project } from './project.ts';
 
 // Client for the public gallery API (server/gallery.ts). Where the API is missing (a static host
@@ -6,7 +7,8 @@ import type { Project } from './project.ts';
 
 export type GalleryEntry = { id: string; title: string; subtitle: string; language: 'de' | 'en'; icons: string[]; model: string | null };
 export type GalleryItem = { id: string; title: string; topic: string; bars: number; model: string | null; dataset: Dataset };
-export type GalleryStatus = { status: 'pending' | 'approved' | 'rejected' | 'removed'; reason: string | null } | null;
+export type Decision = { status: 'approved' | 'rejected' | 'removed' | 'reported'; reason: string | null };
+export type GalleryStatus = Decision | null;
 export type Submission = { id: string; token: string; submittedAt: number };
 
 const BASE = '/api/gallery';
@@ -58,48 +60,36 @@ export async function galleryStatus(sub: Submission): Promise<GalleryStatus> {
 export const withdrawFromGallery = (sub: Submission) =>
   call<null>(`/${encodeURIComponent(sub.id)}`, { method: 'DELETE', headers: { 'x-owner-token': sub.token } });
 
-export type Notice = { reason: string; name: string; email: string; childAbuse: boolean; goodFaith: true };
+export type Notice = { reason: string; name: string; email: string; goodFaith: true };
 
+/** Reports an entry; the answer is the automatic decision ('reported' while it could not run). */
 export const reportGalleryItem = (id: string, notice: Notice) =>
-  call<null>(`/${encodeURIComponent(id)}/report`, {
+  call<Decision>(`/${encodeURIComponent(id)}/report`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(notice),
   });
 
-/** Published datasets are licensed like their most restrictive typical source (Wikipedia: CC BY-SA). */
-export const GALLERY_LICENSE = { name: 'CC BY-SA 4.0', url: 'https://creativecommons.org/licenses/by-sa/4.0/deed.de' };
-
-/** Sources whose numbers may not be republished (paywalls such as Statista). */
-const PAYWALLED = /(^|\.)(statista\.(com|de)|bloomberg\.com|wsj\.com|ft\.com|economist\.com)$/i;
-export const paywalledSources = (ds: Dataset) =>
-  ds.sources.filter((s) => {
-    try {
-      return PAYWALLED.test(new URL(s.url).hostname);
-    } catch {
-      return false;
-    }
-  });
-
 export const entryUrl = (id: string) => `${location.origin}/app#g=${id}`;
 
-// --- moderation (admin token)
+// --- oversight (admin token)
 
-export type Pending = GalleryItem & { subtitle: string; language: string; created_at: number };
+export type Reviewed = GalleryItem & Decision & { subtitle: string; language: string; created_at: number };
 export type Report = {
   id: number;
   submission_id: string;
   reason: string;
-  name: string | null;
-  contact: string | null;
+  handled: number;
+  has_contact: number;
   created_at: number;
   title: string;
-  status: string;
+  status: Decision['status'];
+  decision: string | null;
 };
 
 const auth = (token: string) => ({ authorization: `Bearer ${token}` });
 
-export const moderationQueue = (token: string) => call<{ pending: Pending[]; reports: Report[] }>('/admin/queue', { headers: auth(token) });
+export const moderationQueue = (token: string) => call<{ recent: Reviewed[]; reports: Report[] }>('/admin/queue', { headers: auth(token) });
 
 export const decide = (token: string, id: string, status: 'approved' | 'rejected' | 'removed', reason?: string) =>
   call<null>(`/admin/${encodeURIComponent(id)}`, {

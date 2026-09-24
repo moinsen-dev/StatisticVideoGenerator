@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { GALLERY_LICENSE, galleryStatus, paywalledSources, submitToGallery, withdrawFromGallery, type GalleryStatus } from '../lib/gallery.ts';
 import { useLang, useT } from '../lib/i18n.ts';
+import { CONTACT_MAIL, termsUrl } from '../lib/links.ts';
 import type { Project } from '../lib/project.ts';
 
-/** Studio tab: submit this project to the public gallery, follow the review, withdraw it. */
+/** Studio tab: submit this project to the public gallery, see the automatic decision, withdraw it. */
 export function GalleryPanel(props: { project: Project; update: (fn: (p: Project) => Project) => void }) {
   const t = useT();
   const lang = useLang();
@@ -28,7 +29,8 @@ export function GalleryPanel(props: { project: Project; update: (fn: (p: Project
       props.update((p) => ({ ...p, gallery: next }));
       setAccepted(false);
     } catch (e) {
-      setError((e as Error).message === 'limit' ? t('publishLimit') : (e as Error).message);
+      const message = (e as Error).message;
+      setError(message === 'limit' ? t('publishLimit') : message === 'review unavailable' ? t('publishUnavailable') : message);
     } finally {
       setBusy(false);
     }
@@ -47,8 +49,8 @@ export function GalleryPanel(props: { project: Project; update: (fn: (p: Project
   };
 
   const paywalled = paywalledSources(props.project.dataset);
-  const date = sub && new Date(sub.submittedAt).toLocaleString(lang === 'de' ? 'de-DE' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' });
   const reason = status?.reason || t('noReason');
+  const refused = status?.status === 'rejected' || status?.status === 'removed';
 
   return (
     <div className="stack">
@@ -68,6 +70,9 @@ export function GalleryPanel(props: { project: Project; update: (fn: (p: Project
             </a>
           </li>
         </ul>
+        <a href={termsUrl(lang)} target="_blank" rel="noreferrer">
+          {t('publishTerms')} ↗
+        </a>
       </details>
       {paywalled.length > 0 && (
         <p className="error">{t('publishPaywall', { sources: [...new Set(paywalled.map((s) => new URL(s.url).hostname))].join(', ') })}</p>
@@ -77,10 +82,10 @@ export function GalleryPanel(props: { project: Project; update: (fn: (p: Project
         <p className={`publish-state ${status?.status ?? 'gone'}`}>
           {status === null
             ? t('publishGone')
-            : status.status === 'pending'
-              ? t('publishPending', { date: date ?? '' })
-              : status.status === 'approved'
-                ? t('publishApproved')
+            : status.status === 'approved'
+              ? t('publishApproved')
+              : status.status === 'reported'
+                ? t('publishReported')
                 : status.status === 'rejected'
                   ? t('publishRejected', { reason })
                   : t('publishRemoved', { reason })}{' '}
@@ -88,6 +93,12 @@ export function GalleryPanel(props: { project: Project; update: (fn: (p: Project
             <a href={`/app#g=${sub.id}`} target="_blank" rel="noreferrer">
               {t('publishOpen')} ↗
             </a>
+          )}
+          {refused && (
+            <>
+              <br />
+              {t('publishContact')} <a href={`mailto:${CONTACT_MAIL}`}>{CONTACT_MAIL}</a>
+            </>
           )}
         </p>
       )}
@@ -98,7 +109,7 @@ export function GalleryPanel(props: { project: Project; update: (fn: (p: Project
       </label>
       <div className="row-actions">
         <button type="button" className="primary" disabled={!accepted || busy || paywalled.length > 0} onClick={() => void submit()}>
-          {sub && status !== null ? t('publishResubmit') : t('publishSubmit')}
+          {busy ? t('publishChecking') : sub && status !== null ? t('publishResubmit') : t('publishSubmit')}
         </button>
         {sub && status !== null && (
           <button type="button" className="ghost" disabled={busy} onClick={() => void withdraw()}>

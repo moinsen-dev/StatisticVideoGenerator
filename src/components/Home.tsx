@@ -3,7 +3,7 @@ import { parseDataset, type ResearchRequest, type ServerStatus } from '../../sha
 import { getStatus } from '../lib/api.ts';
 import { exampleProject, listExamples, type Example } from '../lib/examples.ts';
 import { useLang, useT } from '../lib/i18n.ts';
-import { moinsenUrl, REPO_URL } from '../lib/links.ts';
+import { moinsenUrl, privacyUrl, REPO_URL, termsUrl } from '../lib/links.ts';
 import { newProject, type Project } from '../lib/project.ts';
 import { getLocalConfig } from '../lib/local-model.ts';
 import { availableProviders, defaultProvider, isReady, modelLabel, PROVIDERS, saveProvider, type ProviderId } from '../lib/providers.ts';
@@ -298,8 +298,12 @@ export function Home(props: {
           {t('lImprint')}
         </a>
         <span>·</span>
-        <a href={moinsenUrl(lang, 'privacy')} target="_blank" rel="noreferrer">
+        <a href={privacyUrl(lang)} target="_blank" rel="noreferrer">
           {t('privacy')}
+        </a>
+        <span>·</span>
+        <a href={termsUrl(lang)} target="_blank" rel="noreferrer">
+          {t('publishRules')}
         </a>
       </footer>
     </div>

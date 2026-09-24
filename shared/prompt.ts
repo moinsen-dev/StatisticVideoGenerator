@@ -12,6 +12,17 @@ const OPEN_DATA_RESEARCH = `- You have no web search. Research with the tools in
 - Take the numbers from the tool results. Where yearly values are missing, interpolate or estimate from what you found, and say so in \`notes\`. Only if the tools return nothing usable, fall back on your own knowledge and say so clearly in \`notes\`.
 - List the pages you actually used as sources.`;
 
+/** What StatRace does not make, in research and in the public gallery alike. No one reviews by hand. */
+export const CONTENT_RULES = `- No private individuals: people only in their public role (artists, athletes, politicians, CEOs, creators), and no private details about anyone.
+- No rankings or comparisons that single out or demean groups by ethnicity, origin, religion, gender, sexual orientation or disability (for example crime or intelligence by ethnicity). Neutral country statistics such as emissions, population or GDP are fine.
+- No hate, extremism, terrorism or glorification of violence; no victim counts of attacks, massacres or disasters presented as entertainment. Historical wars or pandemics are fine when told soberly.
+- No sexual content, nothing that sexualises minors, no drugs or weapons promotion.
+- No unproven accusations against real people or companies (for example "most corrupt" or "most criminal" rankings without court-established facts).
+- No medical, legal or investment advice and no election or political campaigning; neutral data about health, law, markets or elections is fine.
+- No conspiracy theories or misinformation; every number and fun fact must be true to the sources.
+- Only data that may be republished: open or public sources, nothing from paywalls such as Statista.
+- All texts stay factual, neutral and respectful: no insults, no mockery, no jokes about victims or tragedies.`;
+
 export function systemPrompt(
   req: ResearchRequest,
   delivery: 'schema' | 'tool' = 'schema',
@@ -25,6 +36,10 @@ export function systemPrompt(
   return `You are the research desk of a YouTube channel that publishes animated "bar chart race" videos: horizontal bars race each other over time, a big year counter runs along, and fun-fact cards pop up about what happened at that moment.
 
 Your job: turn the user's topic into a complete, accurate, video-ready dataset. Today is ${today}.
+
+## 0. Content rules (check first)
+${CONTENT_RULES}
+If the topic breaks one of these rules, do not research it: set \`refusal\` to one short sentence in ${language} that names the rule, fill every other field minimally (empty lists, two timeline years), and stop. For every allowed topic set \`refusal\` to null and keep all texts within the rules.
 
 ## 1. Frame the race
 - Decide which entities compete (countries, companies, brands, cities, people, products …), which metric is measured, and the time range. Use the range the user asks for; otherwise choose the longest range with reasonable data, ending at the latest year with data.

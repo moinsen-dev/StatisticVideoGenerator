@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Galerie-Regeln · StatRace</title>
+<meta name="description" content="Regeln, Prüfung, Meldeweg und Kontaktstelle der öffentlichen StatRace-Galerie. Rules, review, reporting and point of contact of the public StatRace gallery.">
+<style>
+  :root {
+    --bg: #070a14;
+    --panel: #0e1428;
+    --line: rgba(255, 255, 255, 0.1);
+    --ink: #eef1ff;
+    --muted: #8c95ba;
+    --accent: #8ea6ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  nav { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.9rem; margin-bottom: 32px; }
+  a { color: var(--accent); }
+  h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 32px 0 8px; }
+  .stand { color: var(--muted); margin: 0 0 24px; }
+  article + article { margin-top: 56px; padding-top: 40px; border-top: 1px solid var(--line); }
+  ul { padding-left: 1.2em; }
+  li + li { margin-top: 4px; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+</style>
+</head>
+<body>
+<main>
+  <nav>
+    <a href="/">StatRace</a>
+    <a href="/app">Studio</a>
+    <a href="#de">Deutsch</a>
+    <a href="#en">English</a>
+  </nav>
+
+  <article id="de">
+    <h1>Galerie-Regeln und Nutzungsbedingungen</h1>
+    <p class="stand">Stand: 24. September 2026</p>
+
+    <h2>1. Anbieter</h2>
+    <p>Die öffentliche Galerie auf statrace.moinsen.dev betreibt moinsen, Ulrich Diedrichsen, Hamburg.
+      Anschrift und Kontakt stehen im <a href="https://moinsen.dev/de/impressum">Impressum</a>.</p>
+
+    <h2>2. Was die Galerie ist</h2>
+    <p>In der Galerie zeigen Nutzerinnen und Nutzer Videos, die sie mit StatRace erstellt haben. Gespeichert wird nur der
+      Datensatz eines Projekts: Thema, Titel, Zeitreihen, Ereignistexte, Quellenangaben und die Musik-Parameter. Das Video
+      entsteht im Browser aus diesem Datensatz. Audio- oder Videodateien, API-Schlüssel und Nutzerkonten gibt es in der
+      Galerie nicht.</p>
+
+    <h2>3. Einreichen</h2>
+    <ul>
+      <li>Einreichen kann jede Person über den Reiter „Galerie“ im Studio, höchstens fünfmal am Tag je Anschluss.</li>
+      <li>Mit dem Einreichen bestätigst du, dass du den Datensatz veröffentlichen darfst und die Regeln unten einhältst.</li>
+      <li>Du erhältst einen Schlüssel, der nur in deinem Browser liegt. Mit ihm siehst du die Entscheidung und ihren Grund
+        und kannst deinen Eintrag jederzeit zurückziehen. Ein zurückgezogener Eintrag wird sofort gelöscht.</li>
+    </ul>
+
+    <h2>4. Regeln für Inhalte</h2>
+    <p>Nicht zulässig sind:</p>
+    <ul>
+      <li>rechtswidrige Inhalte, insbesondere Beleidigung, Verleumdung, Volksverhetzung und die Verletzung fremder Rechte;</li>
+      <li>Privatpersonen und private Angaben über irgendwen; Menschen erscheinen nur in ihrer öffentlichen Rolle;</li>
+      <li>Ranglisten oder Vergleiche, die Gruppen wegen ethnischer Herkunft, Religion, Geschlecht, sexueller Orientierung
+        oder Behinderung herausgreifen oder abwerten; neutrale Länderstatistiken sind in Ordnung;</li>
+      <li>Hass, Extremismus, Terrorismus und verherrlichte Gewalt, auch Opferzahlen als Unterhaltung;</li>
+      <li>sexuelle Inhalte, alles, was Minderjährige sexualisiert, und Werbung für Drogen oder Waffen;</li>
+      <li>unbewiesene Vorwürfe gegen reale Personen oder Unternehmen;</li>
+      <li>medizinische, rechtliche oder Anlageberatung und Wahlkampf; neutrale Daten zu diesen Themen sind in Ordnung;</li>
+      <li>Verschwörungserzählungen, Desinformation, erfundene oder bewusst irreführende Zahlen;</li>
+      <li>Zahlen aus Quellen, die eine Veröffentlichung nicht erlauben, etwa hinter Bezahlschranken (z. B. Statista).</li>
+    </ul>
+    <p>Alle Texte bleiben sachlich und respektvoll. Erwünscht sind offene Quellen wie Our World in Data, die Weltbank oder
+      Wikipedia, jeweils mit Link.</p>
+
+    <h2>5. Prüfung</h2>
+    <ul>
+      <li>moinsen hat kein Moderationsteam. Jede Einreichung prüft ein KI-Modell (derzeit Claude Sonnet von Anthropic)
+        automatisch anhand dieser Regeln und entscheidet sofort, ob sie erscheint. Vorher liest kein Mensch mit.</li>
+      <li>Das Modell sieht Thema, Titel, Untertitel, Einheit, Zeitraum, die Namen der Balken, alle Ereignistexte, die
+        Quellen, Hinweise und die Musikbeschreibung. Wer einreicht, sieht es nicht. Im Zweifel lehnt es ab. Die Richtigkeit
+        jeder einzelnen Zahl prüft es nicht.</li>
+      <li>Zusätzlich lehnt StatRace fest ab: Quellen hinter Bezahlschranken, Links, die nicht mit http oder https beginnen,
+        und Datensätze, die nicht dem Format entsprechen.</li>
+      <li>Schon die Recherche in StatRace folgt denselben Regeln: Themen, die gegen sie verstoßen, recherchiert das Modell
+        nicht.</li>
+      <li>Bei einer Ablehnung siehst du den Grund im Studio. Abgelehnte und entfernte Einträge werden nach 30 Tagen
+        gelöscht.</li>
+      <li>moinsen kann Entscheidungen überprüfen und ändern, also Einträge entfernen oder freigeben.</li>
+      <li>Veröffentlichte Einträge tragen den Hinweis „KI-recherchiert · automatisch geprüft“ und „Angaben ohne Gewähr“.</li>
+      <li>Nicht einverstanden mit einer Entscheidung? Schreib an <a href="mailto:business@moinsen.dev">business@moinsen.dev</a>;
+        dann sieht sich ein Mensch den Fall an. Der Rechtsweg bleibt offen.</li>
+    </ul>
+
+    <h2>6. Einträge melden</h2>
+    <ul>
+      <li>Jeder Eintrag hat den Knopf „Melden“. Eine Meldung enthält eine Begründung, die Fundstelle (wird automatisch
+        eingetragen), freiwillig Name und E-Mail-Adresse und die Erklärung, dass die Angaben nach bestem Wissen richtig und
+        vollständig sind. Höchstens 20 Meldungen am Tag je Anschluss.</li>
+      <li>Der gemeldete Eintrag wird sofort ausgeblendet. Das KI-Modell prüft ihn mit deiner Begründung erneut und
+        entscheidet sofort: Er wird entfernt, oder er erscheint wieder, wenn er nicht gegen die Regeln verstößt. Die
+        Entscheidung siehst du direkt nach dem Melden.</li>
+      <li>Mit E-Mail-Adresse bekommst du Eingangsbestätigung und Entscheidung mit Begründung auch per E-Mail, mit dem
+        Hinweis, dass die Entscheidung automatisiert getroffen wurde. Eine Kopie ohne deinen Namen und ohne deine
+        E-Mail-Adresse geht an moinsen.</li>
+      <li>Fällt die automatische Prüfung aus, bleibt der Eintrag ausgeblendet, bis moinsen entschieden hat.</li>
+      <li>Widerspruch per Antwort auf die E-Mail oder an <a href="mailto:business@moinsen.dev">business@moinsen.dev</a>.
+        Der Rechtsweg bleibt offen.</li>
+    </ul>
+
+    <h2>7. Lizenz</h2>
+    <ul>
+      <li>Veröffentlichte Datensätze stehen unter <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.de">CC BY-SA 4.0</a>.
+        Mit dem Einreichen räumst du diese Lizenz ein, soweit dir Rechte an dem Datensatz zustehen.</li>
+      <li>Wer einen Datensatz weiterverwendet, nennt StatRace und die im Datensatz genannten Quellen und gibt Bearbeitungen
+        unter derselben Lizenz weiter.</li>
+      <li>Die Quellen behalten ihre eigenen Lizenzen.</li>
+    </ul>
+
+    <h2>8. KI und Gewähr</h2>
+    <p>Die Datensätze entstehen mit Hilfe von KI-Modellen (Claude, GPT oder lokale Modelle). Ein weiteres KI-Modell prüft
+      sie auf diese Regeln, nicht jede Zahl auf Richtigkeit. Viele Werte sind Schätzungen oder interpoliert. Alle Angaben
+      erfolgen ohne Gewähr; maßgeblich sind die verlinkten Quellen.</p>
+
+    <h2>9. Kontaktstelle (Art. 11 und 12 Digital Services Act)</h2>
+    <p class="box">E-Mail: <a href="mailto:business@moinsen.dev">business@moinsen.dev</a><br>
+      Für Behörden der Mitgliedstaaten, die EU-Kommission, das Gremium für digitale Dienste und für Nutzerinnen und Nutzer.
+      Sprachen: Deutsch und Englisch. Die E-Mails liest ein Mensch.</p>
+
+    <h2>10. Datenschutz</h2>
+    <p>Welche Daten die Galerie verarbeitet, steht in der
+      <a href="https://moinsen.dev/de/privacy#statrace">Datenschutzerklärung, Abschnitt StatRace</a>.</p>
+
+    <h2>11. Änderungen</h2>
+    <p>moinsen kann diese Bedingungen ändern. Die jeweils aktuelle Fassung steht auf dieser Seite, mit Datum.</p>
+  </article>
+
+  <article id="en" lang="en">
+    <h1>Gallery rules and terms of use</h1>
+    <p class="stand">Last updated: 24 September 2026</p>
+
+    <h2>1. Provider</h2>
+    <p>The public gallery on statrace.moinsen.dev is run by moinsen, Ulrich Diedrichsen, Hamburg, Germany. Address and
+      contact details are in the <a href="https://moinsen.dev/en/impressum">legal notice</a>.</p>
+
+    <h2>2. What the gallery is</h2>
+    <p>In the gallery, people show videos they made with StatRace. Only the dataset of a project is stored: topic, title,
+      time series, event texts, sources and the music parameters. The browser renders the video from this dataset. The
+      gallery has no audio or video files, no API keys and no user accounts.</p>
+
+    <h2>3. Submitting</h2>
+    <ul>
+      <li>Anyone can submit through the “Gallery” tab in the studio, at most five times a day per connection.</li>
+      <li>By submitting you confirm that you may publish the dataset and that it follows the rules below.</li>
+      <li>You get a key that stays in your browser. With it you see the decision and its reason and can withdraw your entry
+        at any time. A withdrawn entry is deleted at once.</li>
+    </ul>
+
+    <h2>4. Content rules</h2>
+    <p>Not allowed:</p>
+    <ul>
+      <li>illegal content, in particular insults, defamation, incitement to hatred and infringing other people’s rights;</li>
+      <li>private individuals and private details about anyone; people appear only in their public role;</li>
+      <li>rankings or comparisons that single out or demean groups by ethnicity, origin, religion, gender, sexual orientation
+        or disability; neutral country statistics are fine;</li>
+      <li>hate, extremism, terrorism and glorified violence, including victim counts presented as entertainment;</li>
+      <li>sexual content, anything that sexualises minors, and promotion of drugs or weapons;</li>
+      <li>unproven accusations against real people or companies;</li>
+      <li>medical, legal or investment advice and election campaigning; neutral data on these subjects is fine;</li>
+      <li>conspiracy theories, misinformation, and made-up or deliberately misleading numbers;</li>
+      <li>numbers from sources that do not allow republication, for example behind paywalls (such as Statista).</li>
+    </ul>
+    <p>All texts stay factual and respectful. Open sources such as Our World in Data, the World Bank or Wikipedia are
+      welcome, each with a link.</p>
+
+    <h2>5. Review</h2>
+    <ul>
+      <li>moinsen has no moderation team. An AI model (currently Claude Sonnet by Anthropic) reviews every submission
+        against these rules and decides at once whether it appears. No person reads it beforehand.</li>
+      <li>The model sees the topic, title, subtitle, unit, time span, the names of the bars, all event texts, the sources,
+        notes and the music description. It does not see who submitted. When in doubt, it rejects. It does not check every
+        single number for accuracy.</li>
+      <li>In addition, StatRace always rejects sources behind paywalls, links that do not start with http or https, and
+        datasets that do not match the format.</li>
+      <li>The research in StatRace already follows the same rules: the model does not research topics that break them.</li>
+      <li>If your submission is rejected, you see the reason in the studio. Rejected and removed entries are deleted after
+        30 days.</li>
+      <li>moinsen can review and change decisions, that is remove or restore entries.</li>
+      <li>Published entries carry the notes “AI-researched · reviewed automatically” and “no guarantee of accuracy”.</li>
+      <li>Disagree with a decision? Write to <a href="mailto:business@moinsen.dev">business@moinsen.dev</a> and a person
+        will look at the case. You may also seek judicial redress.</li>
+    </ul>
+
+    <h2>6. Reporting entries</h2>
+    <ul>
+      <li>Every entry has a “Report” button. A report contains a reason, the location (filled in automatically), optionally
+        your name and email address, and a statement that the information is accurate and complete to the best of your
+        knowledge. At most 20 reports a day per connection.</li>
+      <li>The reported entry is hidden at once. The AI model reviews it again with your reason and decides right away: it is
+        removed, or it reappears if it does not break the rules. You see the decision right after reporting.</li>
+      <li>If you leave an email address, you also get the confirmation and the decision with its reason by email, including
+        the note that the decision was automated. A copy without your name and email address goes to moinsen.</li>
+      <li>If the automatic review fails, the entry stays hidden until moinsen has decided.</li>
+      <li>To disagree, reply to the email or write to <a href="mailto:business@moinsen.dev">business@moinsen.dev</a>. You
+        may also seek judicial redress.</li>
+    </ul>
+
+    <h2>7. Licence</h2>
+    <ul>
+      <li>Published datasets are licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
+        By submitting, you grant this licence to the extent you hold rights in the dataset.</li>
+      <li>Anyone who reuses a dataset credits StatRace and the sources named in the dataset and shares adaptations under the
+        same licence.</li>
+      <li>The sources keep their own licences.</li>
+    </ul>
+
+    <h2>8. AI and accuracy</h2>
+    <p>The datasets are made with the help of AI models (Claude, GPT or local models). Another AI model checks them against
+      these rules, not every number for accuracy. Many values are estimates or interpolated. No guarantee of accuracy; the
+      linked sources are authoritative.</p>
+
+    <h2>9. Point of contact (Art. 11 and 12 Digital Services Act)</h2>
+    <p class="box">Email: <a href="mailto:business@moinsen.dev">business@moinsen.dev</a><br>
+      For authorities of the Member States, the European Commission, the European Board for Digital Services and for
+      users. Languages: German and English. A person reads these emails.</p>
+
+    <h2>10. Privacy</h2>
+    <p>What data the gallery processes is described in the
+      <a href="https://moinsen.dev/en/privacy#statrace">privacy policy, section StatRace</a>.</p>
+
+    <h2>11. Changes</h2>
+    <p>moinsen may change these terms. The current version, with its date, is always on this page.</p>
+  </article>
+</main>
+</body>
+</html>

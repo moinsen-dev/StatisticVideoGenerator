@@ -21,7 +21,8 @@ Stand und nächste Schritte: `STATE.md`. Nutzersicht (Englisch): `README.md`, Be
 | Offene Daten für lokale Modelle | `src/lib/open-data.ts`: Tools `search`, `owid_chart`, `wikipedia_tables` (OWID + Wikipedia, CORS, ohne Key); Verbindung/Modellwahl `src/lib/local-model.ts`, UI `LocalModelSetup.tsx` |
 | Anbieter, Modelle, Preise | `src/lib/providers.ts` (Register + `runResearch`); Keys: `src/lib/keys.ts`; Einstellungsseite: `src/components/Settings.tsx` |
 | Landingpage | `src/landing/Landing.tsx` (Texte `l*` in `i18n.ts`), Live-Demo `RaceDemo.tsx`, Stil `landing.css` |
-| Öffentliche Galerie | `server/gallery.ts` (eine Hono-App für Node/SQLite und Pages Function/D1), `functions/api/gallery/[[path]].ts`, Client `src/lib/gallery.ts`, UI `GalleryPanel` (Studio-Tab), `GalleryList` (Landing + Start), `Moderation` (`/app#moderate`) |
+| Öffentliche Galerie | `server/gallery.ts` (eine Hono-App für Node/SQLite und Pages Function/D1), `functions/api/gallery/[[path]].ts`, Prüfung `server/moderation.ts` (+ `moderation-cli.ts` lokal), Mails `server/mail.ts`, Client `src/lib/gallery.ts`, UI `GalleryPanel` (Studio-Tab), `GalleryList` (Landing + Start), `Moderation` (`/app#moderate`, Aufsicht), Regeln `public/gallery-terms.html` |
+| Inhaltsregeln | `CONTENT_RULES` in `shared/prompt.ts`: gelten für Recherche (Feld `refusal`) und Galerie-Prüfung gleichermaßen |
 | UI-Texte | `src/lib/i18n.ts`: jeder Text als DE- und EN-Eintrag, Komponenten nutzen `useT()` |
 | Beispiele (Landing + Studio) | `public/examples/*.json` + `index.json` (normalisierte Datensätze, offene Quellen bevorzugt), Laden über `src/lib/examples.ts` |
 | Animation, Layout, Effekte | `src/engine/renderer.ts` (Layout pro Format oben in `makeLayout`) |
@@ -58,16 +59,29 @@ Stand und nächste Schritte: `STATE.md`. Nutzersicht (Englisch): `README.md`, Be
 - **OpenAI im Browser:** Abgelehnte POSTs (falscher Key, kein Guthaben) kommen ohne CORS-Header, der Browser
   sieht nur einen Netzwerkfehler. Deshalb prüft `models.retrieve(model)` vorher Key und Modell (diese Antwort
   trägt CORS-Header).
-- **Galerie nur mit Vorab-Moderation** (Rechtslage: `docs/research/2026-09-24-oeffentliche-galerie-rechtslage.md`,
-  Textentwürfe: `docs/legal/`). Nichts erscheint ohne menschliche Freigabe (AI-Act-Art.-50(4)-Ausnahme, DSA).
-  Nur das Datensatz-JSON (`publishable()` kürzt Texte, nur http(s)-Links), keine Konten, Lizenz CC BY-SA 4.0,
-  Paywall-Quellen (Statista u. a.) sind im Studio gesperrt und in der Moderation markiert. IPs nur als Hash mit
-  Tagessalz. Melden nach DSA Art. 16(2) (Begründung, Fundstelle, Name + E-Mail außer bei Missbrauchsdarstellungen,
-  Treu-und-Glauben-Erklärung); Eingangsbestätigung und Entscheidung gehen als vorbereitete Mail aus der
-  Moderation (Art. 16(4)/(5)), danach werden Name und E-Mail gelöscht. Einreicher sehen Status und Grund über
-  ihr Owner-Token und können zurückziehen (löscht). Ohne D1-Binding bleibt die Galerie unsichtbar
-  (`listGallery()` → null). Lokale Testumgebung wie live: Launch-Config `statrace-pages`
-  (`wrangler pages dev` mit lokaler D1).
+- **Galerie ohne Menschen im Normalbetrieb:** moinsen hat kein Moderationsteam (Rechtslage:
+  `docs/research/2026-09-24-oeffentliche-galerie-rechtslage.md`). Drei Schichten, eine Regelliste (`CONTENT_RULES`):
+  1. Die Recherche verweigert regelwidrige Themen über `refusal`; `parseDataset` wirft dann mit dem Grund.
+  2. Jede Einreichung prüft `server/moderation.ts` (Claude Sonnet 5, `messages.parse` mit Zod-Schema, Effort low;
+     lokal die claude CLI) und entscheidet sofort. Budget 300 Prüfungen/Tag als Kostendeckel.
+  3. Eine Meldung (DSA Art. 16(2); Name und E-Mail freiwillig) blendet den Eintrag aus und löst eine neue Prüfung
+     mit der Meldung aus. Melder bekommen Eingang + Entscheidung in einer Mail über Resend, mit Hinweis auf die
+     Automatisierung (Art. 16(4)–(6)); business@moinsen.dev bekommt eine Kopie ohne Personendaten. Danach werden
+     Name und E-Mail gelöscht.
+  - Die Prüfung beurteilt keine Genauigkeit einzelner Zahlen (sie kann die Quellen nicht öffnen), und Meldungen
+    gelten nach demselben Maßstab wie Einreichungen. Sonst entfernt eine Geschmacks-Meldung legitime Einträge
+    (so passiert am 2026-09-24 mit dem CO₂-Beispiel).
+  - Fällt die Prüfung aus: Einreichung → 503; ein gemeldeter Eintrag bleibt ausgeblendet, bis auf `/app#moderate`
+    entschieden ist (dann geht die Entscheidung an wartende Melder).
+  - Kennzeichnung „KI-recherchiert · automatisch geprüft“ ist Pflicht: ohne menschliche Kontrolle greift die
+    Ausnahme aus AI-Act Art. 50(4) nicht.
+  - Nur das Datensatz-JSON (`publishable()` kürzt Texte, nur http(s)-Links, Paywall-Quellen → 400), keine Konten,
+    Lizenz CC BY-SA 4.0, IPs nur als Hash mit Datum. Ohne D1-Binding bleibt die Galerie unsichtbar
+    (`listGallery()` → null).
+  - Regeln und Kontaktstelle (Art. 11/12/14): `public/gallery-terms.html`. Datenschutz: moinsen.dev/privacy#statrace
+    (Repo `website2025`).
+  - Lokaler Server: immer claude CLI und Konsolen-Mails, egal welche Keys in der Umgebung liegen. Test wie live:
+    Launch-Config `statrace-pages` (`wrangler pages dev` mit lokaler D1).
 - **Fortschritt sprachneutral:** Status als `code` + `vars` (`ResearchProgress`), übersetzt wird in der UI.
 - **Node führt `server/*.ts` per Type-Stripping aus:** nur löschbare TS-Syntax (keine Parameter-Properties,
   keine Enums), Importe mit `.ts`-Endung. `tsconfig` erzwingt das mit `erasableSyntaxOnly`.

@@ -1,69 +1,72 @@
 # STATE — StatRace
 
-> **Frozen:** 2026-09-24 12:20
+> **Frozen:** 2026-09-24 13:15
 > **Branch:** `main` · public: https://github.com/moinsen-dev/StatisticVideoGenerator (MIT)
 > **Live:** https://statrace.moinsen.dev (Cloudflare Pages, project `statrace`, static, BYOK): landing page at `/`, studio at `/app`, local models included (Codex only locally).
-> **Last commit:** „feat: öffentliche Galerie mit Vorab-Moderation und DSA-Meldeweg“ (local, not pushed: the legal drafts go public only after Uli's review)
+> **Last commit:** „feat: Galerie ohne Moderationsteam – KI-Prüfung, Inhaltsregeln in der Recherche“ (local, not pushed; the gallery goes public with the next deploy)
 > **Dirty:** clean · the local-only branch `idea-loop/monetarisierung` is deliberately not on GitHub
 
 ## Last work-unit
 
-Public gallery (2026-09-24, ~45 min, including an 18-min legal review in the background):
+Gallery without a moderation team (2026-09-24, ~50 min). Uli has no staff to review anything, so the AI enforces the rules itself:
 
-- **Legal review against primary sources** (DSA, DDG, AI Act Art. 50, UrhG, GDPR, provider terms, Google),
-  53 citations. Result: **okay under conditions**.
-  - File: `docs/research/2026-09-24-oeffentliche-galerie-rechtslage.md`, index in `RESEARCH.md`.
-- **Gallery built and tested locally**, on SQLite and as a Pages Function with a local D1:
-  - Submit from the studio tab „Galerie“: dataset JSON only, CC BY-SA 4.0, Statista/paywall sources blocked, 5 per day.
-  - Moderation at `/app#moderate`: approve, reject or remove with a reason.
-  - Reporting after DSA Art. 16(2): prepared mails for receipt and decision; notifier data is deleted afterwards.
-  - Submitters can withdraw their entry, which deletes it.
-  - Gallery on the landing page and the home screen: label „KI-recherchiert · von moinsen geprüft“, disclaimer,
-    imprint and privacy links.
-- **Draft texts for Uli** in `docs/legal/`: gallery terms (Art. 14, with the contact point) and a privacy policy addition.
-
-Before that, 2026-09-23: research without an API key (local models via Ollama, Codex), landing page, OpenAI, OSS release.
+- **One rule list, three layers** (`CONTENT_RULES` in `shared/prompt.ts`):
+  - The research refuses topics that break the rules (field `refusal`). Tested with the claude CLI:
+    „Kriminalität nach ethnischer Herkunft“ is refused with the rule named.
+  - Every submission is reviewed at once by Claude Sonnet 5 (`server/moderation.ts`). Tested: the CO₂ example
+    is approved, „most criminal ethnic groups“ is rejected (about 5 s per review).
+  - A report hides the entry and triggers a fresh review. Tested: reports about taste or climate denial leave it
+    online. The decision mail goes to the notifier; the copy to business@moinsen.dev carries no personal data.
+- **Hosted path tested** with `wrangler pages dev` and a local D1:
+  - Without `ANTHROPIC_API_KEY`, submissions get 503 and nothing is published.
+  - A report whose review fails keeps the entry hidden. The operator decides on `/app#moderate`, and the notifier
+    then gets a mail with that decision.
+- **Legal texts live in code:** `public/gallery-terms.html` (rules, Art. 14 automation, contact point
+  business@moinsen.dev); the privacy section `#statrace` is committed in `website2025` (`86c635f`, not pushed).
 
 ## Next intended step
 
-1. Uli reviews the drafts in `docs/legal/` and:
-   - provides the contact email for the DSA contact point (`[E-MAIL]`);
-   - adds the privacy section on moinsen.dev.
-2. Go-live, after Uli's go:
+1. Go-live, after Uli's go:
    - `npx wrangler d1 create statrace-gallery`;
    - `wrangler.toml` with `pages_build_output_dir = "dist"` and D1 binding `DB`;
-   - Uli sets `ADMIN_TOKEN` (`npx wrangler pages secret put ADMIN_TOKEN --project-name statrace`) and `RATE_SALT`;
-   - publish the terms in the app;
-   - deploy.
+   - Uli sets the secrets `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `ADMIN_TOKEN` and `RATE_SALT`
+     (`npx wrangler pages secret put <NAME> --project-name statrace`);
+   - push and deploy StatRace, then push `website2025` (privacy section).
+2. After the deploy, submit one entry and one report on the live site. That is the first run of the API review and
+   of Resend.
 3. Still open: a hosted local-model run with `OLLAMA_ORIGINS`, and runs with real Anthropic and OpenAI keys.
 
 ## Open friction
 
-- **Gallery moderation costs time:** each entry needs a real content review (the AI Act exception only applies
-  then), about 2–5 min per entry.
-  - Confirmation mails go out manually through mailto links; automating them with Resend would need a key.
-  - No captcha yet: many IPs could flood the queue. Add Cloudflare Turnstile if that happens.
-
+- **The AI decides alone:** it can wrongly reject or keep an entry.
+  - Mitigation: a report means a second review; people who disagree write to business@moinsen.dev; `/app#moderate`
+    can override.
+  - Cost: about 1–2 cents per review, capped at 300 reviews a day.
+  - No captcha yet. Add Cloudflare Turnstile if spam shows up.
 - **Local speed:** on an M4 Pro, prompt processing runs at ~100 tokens/s and output at ~25 tokens/s.
   - Wikipedia tables are expensive, because Qwen reads every digit as a token.
   - Only OWID values are filled in exactly. Wikipedia numbers are still typed by the model.
-- **Unverified request bodies:** neither BYOK path has seen a valid key:
+- **Unverified request bodies:** none of these has run with a real key yet:
   - OpenAI: strict JSON schema combined with `web_search`.
-  - Anthropic: strict tool combined with web search.
+  - Anthropic: strict tool combined with web search, and the gallery review via `messages.parse`.
 - **Events come from the model's own knowledge** for local models; there is no web search. Check them in the Data tab.
-- **Local CLI modes** (Claude Code, Codex) use your own subscription and are for your own use only.
+- **Local CLI modes** (Claude Code, Codex, and the gallery review on the local server) use your own subscription
+  and are for your own use only.
 
 ## Live context for the agent
 
 - **Hot files:**
-  - `server/gallery.ts`, `src/lib/gallery.ts`, `src/components/GalleryPanel.tsx`, `Moderation.tsx`, `docs/legal/`
+  - `server/gallery.ts`, `server/moderation.ts`, `server/mail.ts`, `shared/prompt.ts` (`CONTENT_RULES`), `public/gallery-terms.html`
   - `src/lib/research-local.ts`, `src/lib/providers.ts`
 - **Deploy:** `npm run build && npx wrangler pages deploy dist --project-name statrace --branch main --commit-dirty=true`
+- **Test the gallery locally:** `npm run dev`, then `POST /api/gallery` on port 8790 (the claude CLI reviews, mails
+  go to the console). Oversight: `/app#moderate`, token `local`.
 - **Test a local model:**
   - In the Browser pane: `/app`, choose „Lokales Modell“ as the research AI, then check the Ollama log in `~/.ollama/logs/server.log`.
   - It prints „Prompt processing progress … total=N“. N shows how many tokens were **not** served from the cache.
 
 ## Docs
 
-- `README.md`: product, providers (incl. `OLLAMA_ORIGINS`), privacy, architecture · `CONTRIBUTING.md`: rules for contributors
-- `CLAUDE.md`: commands, trigger map, fixed rules (incl. the local model design)
+- `README.md`: product, providers (incl. `OLLAMA_ORIGINS`), privacy, gallery self-hosting, architecture · `CONTRIBUTING.md`: rules for contributors
+- `CLAUDE.md`: commands, trigger map, fixed rules (incl. the local model design and the gallery layers)
+- `RESEARCH.md` → `docs/research/`: legal review of the gallery

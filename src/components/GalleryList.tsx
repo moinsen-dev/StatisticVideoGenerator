@@ -1,24 +1,30 @@
 import { useEffect, useState } from 'react';
-import { entryUrl, listGallery, reportGalleryItem, type GalleryEntry } from '../lib/gallery.ts';
-import { useT } from '../lib/i18n.ts';
+import { entryUrl, listGallery, reportGalleryItem, type Decision, type GalleryEntry } from '../lib/gallery.ts';
+import { useLang, useT } from '../lib/i18n.ts';
+import { CONTACT_MAIL, termsUrl } from '../lib/links.ts';
 
 /** Approved gallery entries as cards, each with a report form (notice and action). Renders nothing
  *  where the gallery API is missing. */
 export function GalleryList({ heading, className = '' }: { heading: 'h2' | 'h3'; className?: string }) {
   const t = useT();
+  const lang = useLang();
   const [entries, setEntries] = useState<GalleryEntry[] | null>(null);
   const [reporting, setReporting] = useState<GalleryEntry | null>(null);
 
-  useEffect(() => {
-    void listGallery().then(setEntries);
-  }, []);
+  const load = () => void listGallery().then(setEntries);
+  useEffect(load, []);
 
   if (entries === null) return null;
   const Heading = heading;
   return (
     <section id="gallery" className={`examples gallery ${className}`}>
       <Heading>{t('galleryTitle')}</Heading>
-      <p className="hint">{t('galleryLead')}</p>
+      <p className="hint">
+        {t('galleryLead')}{' '}
+        <a href={termsUrl(lang)} target="_blank" rel="noreferrer">
+          {t('publishRules')}
+        </a>
+      </p>
       {entries.length === 0 ? (
         <p className="muted">{t('galleryEmpty')}</p>
       ) : (
@@ -41,46 +47,76 @@ export function GalleryList({ heading, className = '' }: { heading: 'h2' | 'h3';
           ))}
         </ul>
       )}
-      {reporting && <ReportDialog entry={reporting} onClose={() => setReporting(null)} />}
+      {reporting && (
+        <ReportDialog
+          entry={reporting}
+          onClose={() => {
+            setReporting(null);
+            load(); // a removed or hidden entry leaves the list
+          }}
+        />
+      )}
     </section>
   );
 }
 
-/** Notice form after DSA Art. 16(2): reasons, the exact location, name and email (not needed for
- *  child sexual abuse material), and a statement of good faith. */
+/** Notice form after DSA Art. 16(2): reasons, the exact location, optional name and email (only used to
+ *  send the decision), and a statement of good faith. The entry is reviewed again at once; the dialog
+ *  shows the automatic decision. */
 export function ReportDialog({ entry, onClose }: { entry: { id: string; title: string }; onClose: () => void }) {
   const t = useT();
+  const lang = useLang();
   const [reason, setReason] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [childAbuse, setChildAbuse] = useState(false);
   const [goodFaith, setGoodFaith] = useState(false);
-  const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [sending, setSending] = useState(false);
+  const [decision, setDecision] = useState<Decision | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const complete =
-    reason.trim().length >= 10 && goodFaith && (childAbuse || (name.trim() && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())));
+  const emailOk = !email.trim() || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+  const complete = reason.trim().length >= 10 && goodFaith && emailOk;
 
   const send = async () => {
-    setState('sending');
+    setSending(true);
     setError(null);
     try {
-      await reportGalleryItem(entry.id, { reason: reason.trim(), name: name.trim(), email: email.trim(), childAbuse, goodFaith: true });
-      setState('sent');
+      setDecision(await reportGalleryItem(entry.id, { reason: reason.trim(), name: name.trim(), email: email.trim(), goodFaith: true }));
     } catch (e) {
-      setError((e as Error).message);
-      setState('idle');
+      const message = (e as Error).message;
+      setError(message === 'limit' ? t('reportLimit') : message);
+    } finally {
+      setSending(false);
     }
   };
+
+  const outcome =
+    decision &&
+    (decision.status === 'removed'
+      ? t('reportRemoved', { reason: decision.reason ?? '' })
+      : decision.status === 'approved'
+        ? t('reportKept', { reason: decision.reason ?? '' })
+        : t('reportPending'));
 
   return (
     <div className="dialog-backdrop" role="presentation" onClick={onClose}>
       <div className="dialog" role="dialog" aria-modal="true" aria-label={t('reportTitle')} onClick={(e) => e.stopPropagation()}>
         <h3>{t('reportTitle')}</h3>
-        <p className="hint">{t('reportLead')}</p>
-        {state === 'sent' ? (
-          <p className="good">{t('reportThanks')}</p>
+        {decision ? (
+          <>
+            <p className={decision.status === 'removed' ? 'good' : undefined}>{outcome}</p>
+            <p className="hint">
+              {email.trim() && `${t('reportMailed')} `}
+              {t('reportDisagree')} <a href={`mailto:${CONTACT_MAIL}`}>{CONTACT_MAIL}</a>
+            </p>
+          </>
         ) : (
           <>
+            <p className="hint">
+              {t('reportLead')}{' '}
+              <a href={termsUrl(lang)} target="_blank" rel="noreferrer">
+                {t('publishRules')}
+              </a>
+            </p>
             <p className="hint">
               {t('reportLocation')}: <strong>{entry.title}</strong> · {entryUrl(entry.id)}
             </p>
@@ -91,17 +127,13 @@ export function ReportDialog({ entry, onClose }: { entry: { id: string; title: s
             <div className="grid2">
               <label className="field">
                 <span className="label">{t('reportName')}</span>
-                <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" disabled={childAbuse} />
+                <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
               </label>
               <label className="field">
                 <span className="label">{t('reportEmail')}</span>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" disabled={childAbuse} />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
               </label>
             </div>
-            <label className="check">
-              <input type="checkbox" checked={childAbuse} onChange={(e) => setChildAbuse(e.target.checked)} />
-              {t('reportChildAbuse')}
-            </label>
             <label className="check">
               <input type="checkbox" checked={goodFaith} onChange={(e) => setGoodFaith(e.target.checked)} />
               {t('reportGoodFaith')}
@@ -110,13 +142,13 @@ export function ReportDialog({ entry, onClose }: { entry: { id: string; title: s
           </>
         )}
         <div className="row-actions">
-          {state !== 'sent' && (
-            <button type="button" className="primary" disabled={!complete || state === 'sending'} onClick={() => void send()}>
-              {t('reportSend')}
+          {!decision && (
+            <button type="button" className="primary" disabled={!complete || sending} onClick={() => void send()}>
+              {sending ? t('publishChecking') : t('reportSend')}
             </button>
           )}
           <button type="button" className="ghost" onClick={onClose}>
-            {state === 'sent' ? t('close') : t('cancel')}
+            {decision ? t('close') : t('cancel')}
           </button>
         </div>
       </div>

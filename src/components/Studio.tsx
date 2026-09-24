@@ -5,7 +5,7 @@ import { Transport } from '../audio/transport.ts';
 import { buildModel } from '../engine/model.ts';
 import { FRAME, Renderer } from '../engine/renderer.ts';
 import { GALLERY_LICENSE, listGallery } from '../lib/gallery.ts';
-import { moinsenUrl } from '../lib/links.ts';
+import { moinsenUrl, privacyUrl, termsUrl } from '../lib/links.ts';
 import { useLang, useT } from '../lib/i18n.ts';
 import { fileSlug, type Project, type VideoSettings } from '../lib/project.ts';
 import { loadAudio, saveProject } from '../lib/store.ts';
@@ -333,11 +333,15 @@ function VideoPanel(props: {
             {t('galleryReport')}
           </button>{' '}
           ·{' '}
+          <a href={termsUrl(lang)} target="_blank" rel="noreferrer">
+            {t('publishRules')}
+          </a>{' '}
+          ·{' '}
           <a href={moinsenUrl(lang, 'impressum')} target="_blank" rel="noreferrer">
             {t('lImprint')}
           </a>{' '}
           ·{' '}
-          <a href={moinsenUrl(lang, 'privacy')} target="_blank" rel="noreferrer">
+          <a href={privacyUrl(lang)} target="_blank" rel="noreferrer">
             {t('privacy')}
           </a>
         </p>

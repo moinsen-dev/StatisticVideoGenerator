@@ -32,10 +32,12 @@ a new topic uses your own Anthropic or OpenAI API key, or a local model through 
 - **Editable:** titles, colors, icons, events, sources, or the full JSON. Projects stay in your browser
   (IndexedDB).
 - **English and German** interface. Videos can be researched in either language.
-- **Public gallery:** submit a finished project from the studio. moinsen reviews every submission before it
-  appears; entries are labelled as AI-researched, show all sources, are licensed CC BY-SA 4.0, can be reported by
-  anyone (DSA notice form) and withdrawn by their submitter at any time. Only the dataset JSON is stored, and the
-  browser renders the video from it. Numbers from paywalled sources such as Statista cannot be submitted.
+- **Public gallery:** submit a finished project from the studio. An AI model reviews every submission against the
+  [gallery rules](https://statrace.moinsen.dev/gallery-terms.html) and decides at once. Entries are labelled as
+  AI-researched and automatically reviewed, show all sources and are licensed CC BY-SA 4.0. Anyone can report an
+  entry (DSA notice form): it is hidden at once and reviewed again. Submitters can withdraw their entry at any time.
+  Only the dataset JSON is stored, and the browser renders the video from it. Numbers from paywalled sources such as
+  Statista cannot be submitted, and the research itself refuses topics that break the rules.
 
 ## Run it locally
 
@@ -111,16 +113,20 @@ npx wrangler pages deploy dist --project-name <your-project> --branch main
 ```
 
 The public gallery runs as a Pages Function (`functions/api/gallery/`) on a D1 database. Without a D1 binding it
-stays hidden. To turn it on for your copy:
+stays hidden, and without `ANTHROPIC_API_KEY` nothing gets published. To turn it on for your copy:
 
 ```bash
 npx wrangler d1 create <your-gallery-db>          # put the id into wrangler.toml as binding "DB"
+npx wrangler pages secret put ANTHROPIC_API_KEY --project-name <your-project>   # automatic review
+npx wrangler pages secret put RESEND_API_KEY --project-name <your-project>      # decision mails to notifiers
 npx wrangler pages secret put ADMIN_TOKEN --project-name <your-project>
 npx wrangler pages secret put RATE_SALT --project-name <your-project>
 ```
 
-Review submissions at `/app#moderate` with the admin token. Before you open a gallery to the public, publish
-gallery rules, a way to report entries and a privacy notice that covers it (see `docs/research/`).
+Claude Sonnet decides every submission and every report (`server/moderation.ts`), at most 300 reviews a day.
+`/app#moderate` with the admin token shows the latest decisions and lets you override them. Before you open a
+gallery to the public, change the sender in `server/mail.ts` and the rules and contact point in
+`public/gallery-terms.html`, and cover the gallery in your privacy notice (see `docs/research/`).
 
 ## Contributing
 

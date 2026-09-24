@@ -4,7 +4,7 @@ import { GalleryList } from '../components/GalleryList.tsx';
 import { LangSwitch } from '../components/LangSwitch.tsx';
 import { listExamples, type Example } from '../lib/examples.ts';
 import { useLang, useT, type MessageKey } from '../lib/i18n.ts';
-import { moinsenUrl, REPO_URL } from '../lib/links.ts';
+import { moinsenUrl, privacyUrl, REPO_URL, termsUrl } from '../lib/links.ts';
 import { BYOK_PROVIDERS, PROVIDERS, usdRange } from '../lib/providers.ts';
 import { RaceDemo } from './RaceDemo.tsx';
 import './landing.css';
@@ -253,8 +253,11 @@ export function Landing() {
         <a href={moinsenUrl(lang, 'impressum')} target="_blank" rel="noreferrer">
           {t('lImprint')}
         </a>
-        <a href={moinsenUrl(lang, 'privacy')} target="_blank" rel="noreferrer">
+        <a href={privacyUrl(lang)} target="_blank" rel="noreferrer">
           {t('privacy')}
+        </a>
+        <a href={termsUrl(lang)} target="_blank" rel="noreferrer">
+          {t('publishRules')}
         </a>
       </footer>
     </div>
