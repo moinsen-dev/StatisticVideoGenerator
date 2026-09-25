@@ -2,6 +2,6 @@
   "version": "0.0.1",
   "configurations": [
     {"name": "statrace", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 5190},
-    {"name": "statrace-pages", "runtimeExecutable": "npx", "runtimeArgs": ["wrangler", "pages", "dev", "dist", "--d1", "DB=statrace-gallery-local", "--binding", "ADMIN_TOKEN=local", "--port", "8799"], "port": 8799}
+    {"name": "statrace-pages", "runtimeExecutable": "npx", "runtimeArgs": ["wrangler", "pages", "dev", "--binding", "ADMIN_TOKEN=local", "--binding", "RATE_SALT=local", "--port", "8799"], "port": 8799}
   ]
 }

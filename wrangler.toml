@@ -1,0 +1,11 @@
+# Cloudflare Pages: the static build in dist/ plus the gallery API as a Pages Function (functions/).
+# Secrets live in the Pages project, not here: RESEND_API_KEY, ADMIN_TOKEN, RATE_SALT.
+name = "statrace"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-09-01"
+
+# Public gallery (server/gallery.ts). Created with --jurisdiction eu: stored and processed in the EU only.
+[[d1_databases]]
+binding = "DB"
+database_name = "statrace-gallery"
+database_id = "9fd7078a-a672-4f38-a2b9-1203d25f3744"

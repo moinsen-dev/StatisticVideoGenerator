@@ -118,10 +118,10 @@ stays hidden. It needs no AI key: submitters review their entries with their own
 (`src/lib/review.ts`). To turn it on for your copy:
 
 ```bash
-npx wrangler d1 create <your-gallery-db>          # put the id into wrangler.toml as binding "DB"
+npx wrangler d1 create <your-gallery-db> --jurisdiction eu   # put the id into wrangler.toml as binding "DB"
 npx wrangler pages secret put RESEND_API_KEY --project-name <your-project>      # mails to people who report
 npx wrangler pages secret put ADMIN_TOKEN --project-name <your-project>
-npx wrangler pages secret put RATE_SALT --project-name <your-project>
+openssl rand -hex 32 | npx wrangler pages secret put RATE_SALT --project-name <your-project>   # required
 ```
 
 Reported entries are hidden and wait on `/app#moderate` (admin token) for your decision; the server mails it to
