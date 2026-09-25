@@ -1,9 +1,9 @@
 # STATE — StatRace
 
-> **Frozen:** 2026-09-24 14:30
+> **Frozen:** 2026-09-25 12:05
 > **Branch:** `main` · public: https://github.com/moinsen-dev/StatisticVideoGenerator (MIT)
-> **Live:** https://statrace.moinsen.dev (Cloudflare Pages, project `statrace`, static, BYOK): landing page at `/`, studio at `/app`, local models included (Codex only locally).
-> **Last commit:** „feat: Galerie-Prüfung mit der KI der Einreichenden statt eigenem API-Key“ (local, not pushed; the gallery goes public with the next deploy)
+> **Live:** https://statrace.moinsen.dev (Cloudflare Pages, project `statrace`, BYOK): landing page at `/`, studio at `/app`, local models included (Codex only locally). Public gallery live since 2026-09-25 (Pages Function + D1 `statrace-gallery`, EU jurisdiction), still empty.
+> **Last commit:** „docs(state): Galerie live“ (pushed, deployed)
 > **Dirty:** clean · the local-only branch `idea-loop/monetarisierung` is deliberately not on GitHub
 
 ## Last work-unit
@@ -26,13 +26,11 @@ Gallery without our own AI key (2026-09-24, ~35 min). StatRace is non-profit, so
 
 ## Next intended step
 
-1. Go-live, after Uli's go:
-   - `npx wrangler d1 create statrace-gallery`;
-   - `wrangler.toml` with `pages_build_output_dir = "dist"` and D1 binding `DB`;
-   - Uli sets the secrets `RESEND_API_KEY`, `ADMIN_TOKEN` and `RATE_SALT`
-     (`npx wrangler pages secret put <NAME> --project-name statrace`);
-   - push and deploy StatRace, then push `website2025` (privacy section).
-2. After the deploy, submit one entry and send one report on the live site. That is the first live run of Resend and D1.
+1. **Website deploy via Coolify (Uli):** the privacy section `#statrace` is pushed to `website2025/develop` (`75580e1`),
+   but moinsen.dev still shows „Stand: Januar 2026“. A push alone does not deploy (no webhooks). Until the deploy,
+   the gallery's privacy link points to a page without the StatRace section.
+2. **First live run:** submit one entry on statrace.moinsen.dev (your key or local model), report it with your own
+   email, decide it on `/app#moderate` with the `ADMIN_TOKEN`. That is the first live test of Resend and D1 writes.
 3. Still open: a hosted local-model run with `OLLAMA_ORIGINS`, and runs with real Anthropic and OpenAI keys
    (research and gallery review).
 
