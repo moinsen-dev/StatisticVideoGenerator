@@ -26,9 +26,10 @@ Gallery without our own AI key (2026-09-24, ~35 min). StatRace is non-profit, so
 
 ## Next intended step
 
-1. **Website deploy via Coolify (Uli):** the privacy section `#statrace` is pushed to `website2025/develop` (`75580e1`),
-   but moinsen.dev still shows „Stand: Januar 2026“. A push alone does not deploy (no webhooks). Until the deploy,
-   the gallery's privacy link points to a page without the StatRace section.
+1. **Deploy the website (open question to Uli):** the privacy section `#statrace` is pushed to `website2025/develop`
+   (`75580e1`), but moinsen.dev still shows „Stand: Januar 2026“. moinsen.dev runs behind Cloudflare Tunnel
+   `8b6b20db-…` (DNS), not on Coolify: the repo README is stale. A push does not deploy. Until the deploy, the
+   gallery's privacy link points to a page without the StatRace section.
 2. **First live run:** submit one entry on statrace.moinsen.dev (your key or local model), report it with your own
    email, decide it on `/app#moderate` with the `ADMIN_TOKEN`. That is the first live test of Resend and D1 writes.
 3. Still open: a hosted local-model run with `OLLAMA_ORIGINS`, and runs with real Anthropic and OpenAI keys
